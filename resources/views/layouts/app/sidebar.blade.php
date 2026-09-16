@@ -4,13 +4,13 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <!-- Sidebar Ramping, Presisi Center Disesuaikan -->
-        <aside class="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center justify-between border-r border-zinc-200 bg-zinc-50 py-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <!-- Sidebar Tanpa Garis Pemisah (Border Dihapus) -->
+        <aside class="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center justify-between bg-zinc-50 py-4 dark:bg-zinc-900">
             
             <!-- 1. KELOMPOK ATAS: Menu Navigasi Utama -->
             <div class="flex w-full flex-col items-center gap-3">
                 <nav class="flex w-full flex-col items-center gap-2 px-3">
-                    <!-- Dashboard (Diberi -ml-0.5 untuk geser tipis ke kiri) -->
+                    <!-- Dashboard -->
                     <a href="{{ route('dashboard') }}" wire:navigate title="Dashboard"
                        class="flex h-10 w-10 -ml-0.5 items-center justify-center rounded-lg transition {{ request()->routeIs('dashboard') ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200' }}">
                         <flux:icon.home class="size-5" />

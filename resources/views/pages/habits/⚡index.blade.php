@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Flux\Flux;
 
 new class extends Component {
     public bool $showForm = false;
@@ -39,14 +40,16 @@ new class extends Component {
     #[Computed]
     public function days(): array
     {
-        return collect(range(6, 0))->map(function ($i) {
-            $date = today()->subDays($i);
+        $startOfWeek = today()->startOfWeek(Carbon::MONDAY);
+
+        return collect(range(0, 6))->map(function ($i) use ($startOfWeek) {
+            $date = $startOfWeek->copy()->addDays($i);
             return [
                 'date'     => $date->toDateString(),
                 'label'    => $date->format('D'),
                 'num'      => $date->format('j'),
                 'isToday'  => $date->isToday(),
-                'isFuture' => false,
+                'isFuture' => $date->isFuture(),
             ];
         })->toArray();
     }
@@ -54,10 +57,11 @@ new class extends Component {
     #[Computed]
     public function habits()
     {
-        $start = today()->subDays(6);
+        $start = today()->startOfWeek(Carbon::MONDAY);
+        $end   = today()->endOfWeek(Carbon::SUNDAY);
 
         return Auth::user()->habits()
-            ->with(['logs' => fn ($q) => $q->whereBetween('date', [$start, today()])])
+            ->with(['logs' => fn ($q) => $q->whereBetween('date', [$start, $end])])
             ->latest()
             ->get();
     }
@@ -175,10 +179,10 @@ new class extends Component {
 
         if ($this->editingId) {
             Auth::user()->habits()->findOrFail($this->editingId)->update($data);
-            session()->flash('message', 'Habit successfully updated.');
+            Flux::toast(text: 'Habit successfully updated.', variant: 'success');
         } else {
             Auth::user()->habits()->create($data);
-            session()->flash('message', 'Habit successfully created.');
+            Flux::toast(text: 'Habit successfully created.', variant: 'success');
         }
 
         $this->resetForm();
@@ -192,7 +196,7 @@ new class extends Component {
         $this->selectedHabitId = null;
         $this->showForm = false;
         unset($this->habits);
-        session()->flash('message', 'Habit successfully deleted.');
+        Flux::toast(text: 'Habit successfully deleted.', variant: 'danger');
     }
 
     public function cancel(): void
@@ -234,32 +238,26 @@ new class extends Component {
         </div>
 
         {{-- Kalender Tanggal (Struktur presisi disamakan persis dengan card di bawah) --}}
-        @if (count($this->habits))
-            <div class="flex items-end border-b border-zinc-800/80 pb-4 mb-4 px-3">
-                {{-- Spacer Kiri (Lebar disamakan persis w-[280px] dengan padding identik) --}}
-                
-                
-                {{-- Area Kanan: Grid 7 Kolom Presisi --}}
-                <div class="flex-1 grid grid-cols-7 justify-items-center">
-                    @foreach ($this->days as $day)
-                        <div class="flex flex-col items-center">
-                            <p class="text-[11px] font-medium {{ $day['isToday'] ? 'text-emerald-500' : 'text-zinc-400' }}">{{ $day['label'] }}</p>
-                            <p class="text-[13px] font-bold mt-0.5 {{ $day['isToday'] ? 'text-emerald-500' : 'text-zinc-100' }}">{{ $day['num'] }}</p>
-                            
-                            {{-- Lingkaran Progress (SVG) --}}
-                            <div class="relative w-[26px] h-[26px] mt-2">
-                                <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="18" cy="18" r="14" fill="none" class="stroke-zinc-800" stroke-width="4"></circle>
-                                    @php $progress = $this->getDailyProgress($day['date']); @endphp
-                                    <circle cx="18" cy="18" r="14" fill="none" class="stroke-emerald-500 transition-all duration-500 ease-out" stroke-width="4"
-                                            stroke-dasharray="88" stroke-dashoffset="{{ 88 - (88 * $progress / 100) }}"></circle>
-                                </svg>
-                            </div>
+        <div class="flex items-end border-b border-zinc-800/80 pb-4 mb-4 px-3 {{ count($this->habits) ? '' : 'opacity-30' }}">
+            <div class="flex-1 grid grid-cols-7 justify-items-center">
+                @foreach ($this->days as $day)
+                    <div class="flex flex-col items-center {{ $day['isFuture'] ? 'opacity-30' : '' }}">
+                        <p class="text-[11px] font-medium {{ $day['isToday'] ? 'text-emerald-500' : 'text-zinc-400' }}">{{ $day['label'] }}</p>
+                        <p class="text-[13px] font-bold mt-0.5 {{ $day['isToday'] ? 'text-emerald-500' : 'text-zinc-100' }}">{{ $day['num'] }}</p>
+
+                        {{-- Lingkaran Progress (SVG) --}}
+                        <div class="relative w-[26px] h-[26px] mt-2">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="18" cy="18" r="14" fill="none" class="stroke-zinc-800" stroke-width="4"></circle>
+                                @php $progress = $this->getDailyProgress($day['date']); @endphp
+                                <circle cx="18" cy="18" r="14" fill="none" class="stroke-emerald-500 transition-all duration-500 ease-out" stroke-width="4"
+                                        stroke-dasharray="88" stroke-dashoffset="{{ 88 - (88 * $progress / 100) }}"></circle>
+                            </svg>
                         </div>
-                    @endforeach
-                </div>
+                    </div>
+                @endforeach
             </div>
-        @endif
+        </div>
 
         @if (session('message'))
             <div class="p-3 mb-6 bg-emerald-500/10 text-emerald-400 rounded-lg text-sm border border-emerald-500/20">
@@ -276,14 +274,9 @@ new class extends Component {
 
                     {{-- Nama Habit (Lebar w-[280px] dengan pl-1 agar presisi sejajar dengan header di atas) --}}
                     <button wire:click="selectHabit({{ $habit->id }})" class="w-[280px] shrink-0 text-left flex items-center gap-3.5 pl-1 pr-4 min-w-0">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-heading font-bold text-sm
                              {{ ['bg-emerald-300 text-emerald-900', 'bg-blue-300 text-blue-900', 'bg-purple-300 text-purple-900', 'bg-rose-300 text-rose-900'][$habit->id % 4] }}">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
-                                <path d="M12 8l0 8"></path>
-                                <path d="M8 12l8 0"></path>
-                             </svg>
+                            {{ strtoupper(mb_substr($habit->name, 0, 1)) }}
                         </div>
 
                         <div class="min-w-0 flex-1">
@@ -313,7 +306,9 @@ new class extends Component {
                             @php $done = $this->isCompleted($habit, $day['date']); @endphp
                             <button wire:click="toggleDay({{ $habit->id }}, '{{ $day['date'] }}')"
                                     wire:key="day-{{ $habit->id }}-{{ $day['date'] }}"
+                                    @disabled($day['isFuture'])
                                     class="w-[26px] h-[26px] rounded-full flex items-center justify-center transition-all duration-200 shrink-0
+                                           {{ $day['isFuture'] ? 'opacity-30 cursor-not-allowed' : '' }}
                                            {{ $done
                                                 ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                                                 : 'bg-zinc-700/60 hover:bg-zinc-600' }}">
@@ -339,7 +334,7 @@ new class extends Component {
     {{-- ============================== --}}
     {{-- SISI KANAN (1/3 LAYAR) - PANEL DETAIL --}}
     {{-- ============================== --}}
-    <div class="hidden lg:block lg:w-1/3 h-full overflow-y-auto bg-zinc-900 border-l border-zinc-800/80 relative shadow-xl">
+    <div class="{{ ($showForm || $selectedHabitId) ? 'fixed inset-0 z-50 bg-zinc-900' : 'hidden' }} lg:static lg:block lg:w-1/3 lg:z-auto h-full overflow-y-auto bg-zinc-900 border-l border-zinc-800/80 relative shadow-xl">
         
         @if ($showForm)
             <div class="p-8 space-y-6">
@@ -484,6 +479,10 @@ new class extends Component {
                     </button>
                 </div>
             </div>
+        @else
+            <div class="hidden lg:flex h-full items-center justify-center p-8 text-center text-zinc-600 text-sm">
+                Select a habit to view details, or click "Add" to create a new one.
+            </div>
         @endif
     </div>
-</div>
+</div

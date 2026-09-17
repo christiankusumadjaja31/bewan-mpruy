@@ -14,6 +14,7 @@ new class extends Component {
     public ?int $editingId = null;
     public ?int $selectedHabitId = null;
     public ?int $confirmingDeleteId = null;
+    public string $calendarMonth;
 
     #[Validate('required|string|max:255')]
     public string $name = '';
@@ -36,6 +37,7 @@ new class extends Component {
     public function mount(): void
     {
         $this->start_date = now()->toDateString();
+        $this->calendarMonth = today()->format('Y-m');
     }
 
     #[Computed]
@@ -158,6 +160,7 @@ new class extends Component {
     {
         $this->showForm = false;
         $this->selectedHabitId = $this->selectedHabitId === $id ? null : $id;
+        $this->calendarMonth = today()->format('Y-m');
     }
 
     public function create(): void
@@ -222,6 +225,61 @@ new class extends Component {
         $this->showForm = false;
     }
 
+    public function previousMonth(): void
+    {
+        $this->calendarMonth = Carbon::createFromFormat('Y-m', $this->calendarMonth)->subMonth()->format('Y-m');
+    }
+
+    public function nextMonth(): void
+    {
+        $this->calendarMonth = Carbon::createFromFormat('Y-m', $this->calendarMonth)->addMonth()->format('Y-m');
+    }
+
+    #[Computed]
+    public function calendarMonthLabel(): string
+    {
+        return Carbon::createFromFormat('Y-m', $this->calendarMonth)->translatedFormat('F Y');
+    }
+
+    #[Computed]
+    public function calendarWeeks(): array
+    {
+        if (! $this->selectedHabit) {
+            return [];
+        }
+
+        $monthStart = Carbon::createFromFormat('Y-m', $this->calendarMonth)->startOfMonth();
+        $gridStart  = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
+        $gridEnd    = $monthStart->copy()->endOfMonth()->endOfWeek(Carbon::SATURDAY);
+
+        $completedDates = HabitLog::where('habit_id', $this->selectedHabit->id)
+            ->where('completed', true)
+            ->whereBetween('date', [$gridStart, $gridEnd])
+            ->pluck('date')
+            ->map(fn ($d) => $d->toDateString())
+            ->toArray();
+
+        $weeks  = [];
+        $cursor = $gridStart->copy();
+
+        while ($cursor <= $gridEnd) {
+            $week = [];
+            for ($i = 0; $i < 7; $i++) {
+                $week[] = [
+                    'date'      => $cursor->toDateString(),
+                    'day'       => $cursor->day,
+                    'inMonth'   => $cursor->month === $monthStart->month,
+                    'isToday'   => $cursor->isToday(),
+                    'completed' => in_array($cursor->toDateString(), $completedDates),
+                ];
+                $cursor->addDay();
+            }
+            $weeks[] = $week;
+        }
+
+        return $weeks;
+    }
+
     private function resetForm(): void
     {
         $this->reset(['editingId', 'name', 'category', 'frequency', 'target', 'unit']);
@@ -233,18 +291,18 @@ new class extends Component {
 ?>
 
 <div class="fixed top-0 bottom-0 right-0 left-0 lg:left-16 z-40 flex overflow-hidden">
-    
+
     {{-- ============================== --}}
     {{-- SISI KIRI (2/3 LAYAR) - WORKSPACE --}}
     {{-- ============================== --}}
     <div class="w-full lg:w-2/3 h-full overflow-y-auto bg-zinc-950 px-8 py-8">
-        
+
         {{-- Bagian Atas: Judul & Tombol Add --}}
         <div class="flex items-center justify-between mb-8">
             <h1 class="font-heading text-2xl font-bold text-zinc-100">
                 Habit
             </h1>
-            
+
             <button wire:click="create" title="Add New Habit"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 hover:bg-emerald-400 transition shadow-[0_0_12px_rgba(16,185,129,0.3)] font-semibold text-sm">
                 <span>Add</span>
@@ -254,7 +312,7 @@ new class extends Component {
             </button>
         </div>
 
-        {{-- Kalender Tanggal (Struktur presisi disamakan persis dengan card di bawah) --}}
+        {{-- Kalender Tanggal (minggu berjalan) --}}
         <div class="flex items-end border-b border-zinc-800/80 pb-4 mb-4 px-3 {{ count($this->habits) ? '' : 'opacity-30' }}">
             <div class="flex-1 grid grid-cols-7 justify-items-center">
                 @foreach ($this->days as $day)
@@ -262,7 +320,6 @@ new class extends Component {
                         <p class="text-[11px] font-medium {{ $day['isToday'] ? 'text-emerald-500' : 'text-zinc-400' }}">{{ $day['label'] }}</p>
                         <p class="text-[13px] font-bold mt-0.5 {{ $day['isToday'] ? 'text-emerald-500' : 'text-zinc-100' }}">{{ $day['num'] }}</p>
 
-                        {{-- Lingkaran Progress (SVG) --}}
                         <div class="relative w-[26px] h-[26px] mt-2">
                             <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="18" cy="18" r="14" fill="none" class="stroke-zinc-800" stroke-width="4"></circle>
@@ -289,7 +346,6 @@ new class extends Component {
                      class="flex items-center bg-zinc-900 rounded-xl py-3 px-3 transition group
                           {{ $selectedHabitId === $habit->id ? 'bg-zinc-800/80 ring-1 ring-emerald-500/50' : 'hover:bg-zinc-800/60' }}">
 
-                    {{-- Nama Habit (Lebar w-[280px] dengan pl-1 agar presisi sejajar dengan header di atas) --}}
                     <button wire:click="selectHabit({{ $habit->id }})" class="w-[280px] shrink-0 text-left flex items-center gap-3.5 pl-1 pr-4 min-w-0">
                         <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-heading font-bold text-sm
                              {{ ['bg-emerald-300 text-emerald-900', 'bg-blue-300 text-blue-900', 'bg-purple-300 text-purple-900', 'bg-rose-300 text-rose-900'][$habit->id % 4] }}">
@@ -317,7 +373,6 @@ new class extends Component {
                         </div>
                     </button>
 
-                    {{-- Barisan Checklist Habit (Grid 7 Kolom yang SEJAJAR PERSIS LURUS ke bawah) --}}
                     <div class="flex-1 grid grid-cols-7 justify-items-center">
                         @foreach ($this->days as $day)
                             @php $done = $this->isCompleted($habit, $day['date']); @endphp
@@ -347,15 +402,13 @@ new class extends Component {
         </div>
     </div>
 
-
     {{-- ============================== --}}
     {{-- SISI KANAN (1/3 LAYAR) - PANEL DETAIL --}}
     {{-- ============================== --}}
     <div class="{{ ($showForm || $selectedHabitId) ? 'fixed inset-0 z-50 bg-zinc-900' : 'hidden' }} lg:static lg:block lg:w-1/3 lg:z-auto h-full overflow-y-auto bg-zinc-900 border-l border-zinc-800/80 relative shadow-xl">
-        
+
         @if ($showForm)
             <div class="p-8 space-y-6">
-                {{-- Header Form & Tombol Close (X) --}}
                 <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
                     <h2 class="font-heading font-semibold text-zinc-100 text-lg">
                         {{ $editingId ? 'Edit Habit' : 'New Habit' }}
@@ -426,7 +479,6 @@ new class extends Component {
         @elseif ($this->selectedHabit)
             @php $habit = $this->selectedHabit; @endphp
             <div class="p-8 space-y-6">
-                {{-- Header Detail & Tombol Close (X) --}}
                 <div class="flex items-start justify-between border-b border-zinc-800 pb-4">
                     <div>
                         <p class="font-heading text-xl font-semibold text-zinc-100">{{ $habit->name }}</p>
@@ -455,6 +507,42 @@ new class extends Component {
                         </svg>
                         <p class="text-2xl font-heading font-bold text-zinc-100">{{ $this->totalCompletions($habit) }}</p>
                         <p class="text-xs text-zinc-500 mt-0.5">Total Completions</p>
+                    </div>
+                </div>
+
+                {{-- Kalender bulanan --}}
+                <div class="border-t border-zinc-800/50 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <button wire:click="previousMonth" class="p-1 rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                            </svg>
+                        </button>
+                        <p class="font-heading text-sm font-semibold text-zinc-200">{{ $this->calendarMonthLabel }}</p>
+                        <button wire:click="nextMonth" class="p-1 rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-y-1.5">
+                        @foreach (['S','M','T','W','T','F','S'] as $d)
+                            <p class="text-[10px] text-zinc-500 font-medium text-center">{{ $d }}</p>
+                        @endforeach
+
+                        @foreach ($this->calendarWeeks as $week)
+                            @foreach ($week as $cell)
+                                <div wire:key="cal-{{ $cell['date'] }}" class="flex justify-center">
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[11px]
+                                                {{ ! $cell['inMonth'] ? 'text-zinc-700' : 'text-zinc-300' }}
+                                                {{ $cell['completed'] ? 'bg-emerald-500 text-white font-semibold' : '' }}
+                                                {{ $cell['isToday'] && ! $cell['completed'] ? 'ring-1 ring-emerald-500' : '' }}">
+                                        {{ $cell['day'] }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endforeach
                     </div>
                 </div>
 
@@ -501,7 +589,8 @@ new class extends Component {
             </div>
         @endif
     </div>
-        <flux:modal name="confirm-delete" class="w-full max-w-sm">
+
+    <flux:modal name="confirm-delete" class="w-full max-w-sm">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete this habit?</flux:heading>
@@ -519,6 +608,5 @@ new class extends Component {
                 </flux:button>
             </div>
         </div>
-        </flux:modal>
-    </div>
-</div>  
+    </flux:modal>
+</div>

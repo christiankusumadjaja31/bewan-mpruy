@@ -13,6 +13,7 @@ new class extends Component {
     public bool $showForm = false;
     public ?int $editingId = null;
     public ?int $selectedHabitId = null;
+    public ?int $confirmingDeleteId = null;
 
     #[Validate('required|string|max:255')]
     public string $name = '';
@@ -100,19 +101,27 @@ new class extends Component {
     public function toggleDay(int $habitId, string $date): void
     {
         if ($date > today()->toDateString()) {
-            return; 
+            return;
         }
 
         $habit = Auth::user()->habits()->findOrFail($habitId);
 
-        $log = HabitLog::firstOrNew([
-            'habit_id' => $habit->id,
-            'date'     => $date,
-        ]);
+        $log = HabitLog::where('habit_id', $habit->id)
+            ->whereDate('date', $date)
+            ->first();
 
-        $log->completed = ! $log->completed;
-        $log->value = $log->completed ? $habit->target : 0;
-        $log->save();
+        if ($log) {
+            $log->completed = ! $log->completed;
+            $log->value = $log->completed ? $habit->target : 0;
+            $log->save();
+        } else {
+            HabitLog::create([
+                'habit_id'  => $habit->id,
+                'date'      => $date,
+                'completed' => true,
+                'value'     => $habit->target,
+            ]);
+        }
 
         unset($this->habits, $this->selectedHabit);
     }
@@ -194,9 +203,17 @@ new class extends Component {
     {
         Auth::user()->habits()->findOrFail($id)->delete();
         $this->selectedHabitId = null;
+        $this->confirmingDeleteId = null;
         $this->showForm = false;
         unset($this->habits);
+        $this->modal('confirm-delete')->close();
         Flux::toast(text: 'Habit successfully deleted.', variant: 'danger');
+    }
+
+    public function confirmDelete(int $id): void
+    {
+        $this->confirmingDeleteId = $id;
+        $this->modal('confirm-delete')->show();
     }
 
     public function cancel(): void
@@ -290,7 +307,7 @@ new class extends Component {
                                     {{ $this->totalCompletions($habit) }} Days
                                 </span>
                                 <span class="flex items-center gap-1 shrink-0">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-orange-500" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                                         <path d="M12 12c2 -2.96 0 -7 -1 -8c0 3.038 -1.773 4.741 -3 6c-1.226 1.26 -2 3.24 -2 5a6 6 0 1 0 12 0c0 -1.532 -1.056 -3.94 -2 -5c-1.786 3 -2.791 3 -4 2z"></path>
                                     </svg>
@@ -424,7 +441,7 @@ new class extends Component {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-zinc-800/40 rounded-xl p-4 text-center border border-zinc-700/50">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500 mx-auto mb-1" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-orange-500 mx-auto mb-1" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                             <path d="M12 12c2 -2.96 0 -7 -1 -8c0 3.038 -1.773 4.741 -3 6c-1.226 1.26 -2 3.24 -2 5a6 6 0 1 0 12 0c0 -1.532 -1.056 -3.94 -2 -5c-1.786 3 -2.791 3 -4 2z"></path>
                         </svg>
@@ -470,8 +487,7 @@ new class extends Component {
                             class="flex-1 py-2 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg transition border border-zinc-700">
                         Edit
                     </button>
-                    <button wire:click="delete({{ $habit->id }})"
-                            wire:confirm="Are you sure you want to delete this habit?"
+                    <button wire:click="confirmDelete({{ $habit->id }})"
                             class="py-2 px-4 text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition border border-red-500/20">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -485,4 +501,24 @@ new class extends Component {
             </div>
         @endif
     </div>
-</div
+        <flux:modal name="confirm-delete" class="w-full max-w-sm">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Delete this habit?</flux:heading>
+                <flux:text class="mt-2 text-zinc-400">
+                    This action cannot be undone. All check-in history for this habit will be permanently removed.
+                </flux:text>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:button variant="ghost" x-on:click="$flux.modal('confirm-delete').close()">
+                    Cancel
+                </flux:button>
+                <flux:button variant="danger" wire:click="delete({{ $confirmingDeleteId }})">
+                    Delete
+                </flux:button>
+            </div>
+        </div>
+        </flux:modal>
+    </div>
+</div>  

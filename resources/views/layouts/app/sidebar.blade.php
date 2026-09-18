@@ -23,8 +23,8 @@
                     </a>
 
                     <!-- Challenge -->
-                    <a href="#" wire:navigate title="Challenge"
-                       class="flex h-10 w-10 -ml-0.5 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/50 hover:text-zinc-200">
+                    <a href="{{ route('challenges.index') }}" wire:navigate title="Challenge"
+                       class="flex h-10 w-10 -ml-0.5 items-center justify-center rounded-lg transition {{ request()->routeIs('challenges.*') ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200' }}">
                         <flux:icon.trophy class="size-5" />
                     </a>
                 </nav>

@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use App\Models\ChallengeMember;
+use App\Models\Challenge;
+use App\Models\ChallengeLog;
 use Flux\Flux;
 
 new class extends Component {
@@ -100,7 +103,7 @@ new class extends Component {
         return (int) round(($completed / $this->habits->count()) * 100);
     }
 
-    public function toggleDay(int $habitId, string $date): void
+        public function toggleDay(int $habitId, string $date): void
     {
         if ($date > today()->toDateString()) {
             return;
@@ -117,7 +120,7 @@ new class extends Component {
             $log->value = $log->completed ? $habit->target : 0;
             $log->save();
         } else {
-            HabitLog::create([
+            $log = HabitLog::create([
                 'habit_id'  => $habit->id,
                 'date'      => $date,
                 'completed' => true,
@@ -125,7 +128,51 @@ new class extends Component {
             ]);
         }
 
+        $this->syncChallengePoints($habit, $log);
+
         unset($this->habits, $this->selectedHabit);
+    }
+
+    private function syncChallengePoints(Habit $habit, HabitLog $log): void
+    {
+        $memberships = ChallengeMember::where('user_id', Auth::id())
+            ->where('habit_id', $habit->id)
+            ->get();
+
+        foreach ($memberships as $membership) {
+            $challenge = Challenge::find($membership->challenge_id);
+
+            if (! $challenge || $challenge->status !== 'active') {
+                continue;
+            }
+
+            if ($log->completed) {
+                ChallengeLog::updateOrCreate(
+                    [
+                        'challenge_id' => $challenge->id,
+                        'user_id'      => Auth::id(),
+                        'date'         => $log->date->toDateString(),
+                    ],
+                    [
+                        'habit_log_id' => $log->id,
+                        'points'       => $challenge->points_per_completion,
+                    ]
+                );
+            } else {
+                ChallengeLog::where('challenge_id', $challenge->id)
+                    ->where('user_id', Auth::id())
+                    ->where('date', $log->date->toDateString())
+                    ->delete();
+            }
+        }
+    }
+
+    public function isChallengeLinked(Habit $habit): bool
+    {
+        return ChallengeMember::where('user_id', Auth::id())
+            ->where('habit_id', $habit->id)
+            ->whereHas('challenge', fn ($q) => $q->where('status', 'active')->whereDate('end_date', '>=', today()))
+            ->exists();
     }
 
     public function currentStreak(Habit $habit): int
@@ -353,7 +400,14 @@ new class extends Component {
                         </div>
 
                         <div class="min-w-0 flex-1">
-                            <p class="font-heading text-[15px] font-medium text-zinc-100 truncate group-hover:text-emerald-400 transition">{{ $habit->name }}</p>
+                            <p class="font-heading text-[15px] font-medium text-zinc-100 truncate group-hover:text-emerald-400 transition flex items-center gap-1.5">
+                                <span class="truncate">{{ $habit->name }}</span>
+                                @if ($this->isChallengeLinked($habit))
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="currentColor" title="Linked to a challenge">
+                                        <path d="M5 4h14a1 1 0 011 1v2a4 4 0 01-4 4h-.1A6.002 6.002 0 0113 15.917V18h2a1 1 0 011 1v1H8v-1a1 1 0 011-1h2v-2.083A6.002 6.002 0 018.1 11H8a4 4 0 01-4-4V5a1 1 0 011-1zm0 2v1a2 2 0 002 2 6.02 6.02 0 010-3H5zm14 0h-2a6.02 6.02 0 010 3 2 2 0 002-2V6z"/>
+                                    </svg>
+                                @endif
+                            </p>
                             <p class="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-3 font-medium">
                                 <span class="flex items-center gap-1 shrink-0">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none">

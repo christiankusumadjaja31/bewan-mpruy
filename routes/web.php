@@ -12,4 +12,8 @@ Route::livewire('/habits', 'pages::habits.index')
     ->middleware(['auth', 'verified'])
     ->name('habits.index');
 
+Route::livewire('/challenges', 'pages::challenges.index')
+    ->middleware(['auth', 'verified'])
+    ->name('challenges.index');
+
 require __DIR__.'/settings.php';

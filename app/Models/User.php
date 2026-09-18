@@ -65,6 +65,6 @@ class User extends Authenticatable
     public function challenges(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Challenge::class, 'challenge_members')
-                    ->withPivot('joined_at');
+                    ->withPivot('joined_at', 'habit_id');
     }
 }

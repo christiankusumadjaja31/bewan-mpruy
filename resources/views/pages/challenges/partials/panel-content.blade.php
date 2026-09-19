@@ -1,0 +1,200 @@
+@if ($showCreateForm)
+    <div class="p-5 lg:p-8 space-y-5 lg:space-y-6 pb-28 lg:pb-8">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <h2 class="font-heading font-semibold text-zinc-100 text-xl lg:text-lg">New Challenge</h2>
+            <button wire:click="cancelCreate" class="text-zinc-400 hover:text-zinc-200 transition bg-zinc-800 hover:bg-zinc-700 p-2 lg:p-1.5 rounded-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-5 lg:space-y-5">
+            <div>
+                <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">Challenge Name</label>
+                <input type="text" wire:model="name" placeholder="e.g., 30 Days Study Duel"
+                       class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition placeholder:text-zinc-700">
+                @error('name') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+            </div>
+
+            <div>
+                <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">Description</label>
+                <textarea wire:model="description" rows="3" placeholder="What's this challenge about?"
+                       class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition placeholder:text-zinc-700"></textarea>
+                @error('description') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">Start Date</label>
+                    <input type="date" wire:model="start_date"
+                           class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition">
+                    @error('start_date') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">End Date</label>
+                    <input type="date" wire:model="end_date"
+                           class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition">
+                    @error('end_date') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">Points per Check-in</label>
+                <input type="number" wire:model="points_per_completion" min="1"
+                       class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition">
+                @error('points_per_completion') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+            </div>
+
+            <label class="flex items-center gap-3 lg:gap-2 text-sm text-zinc-300 pt-1">
+                <input type="checkbox" wire:model="is_private" class="rounded border-zinc-700 bg-zinc-800 text-emerald-500 w-5 h-5 lg:w-4 lg:h-4 focus:ring-emerald-500 focus:ring-offset-0">
+                Make this challenge private (invite-only)
+            </label>
+
+            <div class="border-t border-zinc-800/50 pt-5 lg:pt-5">
+                <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">What should participants do?</label>
+                <input type="text" wire:model="habit_name" placeholder="e.g., Study 1 hour"
+                       class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition placeholder:text-zinc-700">
+                @error('habit_name') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+                <p class="text-xs text-zinc-500 mt-1.5">This becomes the habit every participant — including you — automatically gets added to their Habits.</p>
+            </div>
+
+            <div class="pt-4 lg:pt-2">
+                <button wire:click="create"
+                        class="w-full py-3.5 lg:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg transition text-base lg:text-sm">
+                    Create Challenge
+                </button>
+            </div>
+        </div>
+    </div>
+
+@elseif ($this->selectedChallenge)
+    @php $challenge = $this->selectedChallenge; $isMember = (bool) $this->membership; $leaderboard = $this->challengeLeaderboard; @endphp
+    <div class="p-5 lg:p-8 space-y-5 lg:space-y-6 pb-28 lg:pb-8">
+        <div class="flex items-start justify-between border-b border-zinc-800 pb-4">
+            <div>
+                <p class="font-heading text-2xl lg:text-xl font-semibold text-zinc-100">{{ $challenge->name }}</p>
+                <p class="text-[11px] lg:text-xs text-zinc-500 mt-1">
+                    {{ $challenge->start_date?->format('d M') }} &ndash; {{ $challenge->end_date?->format('d M Y') }}
+                    @if ($challenge->visibility === 'private')
+                        &middot; <span class="text-amber-400">Private</span>
+                    @endif
+                </p>
+            </div>
+            <button wire:click="$set('selectedChallengeId', null)" class="text-zinc-400 hover:text-zinc-200 transition bg-zinc-800 hover:bg-zinc-700 p-2 lg:p-1.5 rounded-md mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        @if ($this->isCreator)
+            <button wire:click="toggleVisibility"
+                    class="text-sm lg:text-xs px-4 py-2 lg:px-3 lg:py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition">
+                Make {{ $challenge->visibility === 'public' ? 'Private' : 'Public' }}
+            </button>
+        @endif
+
+        @if ($challenge->description)
+            <p class="text-base lg:text-sm text-zinc-300">{{ $challenge->description }}</p>
+        @endif
+
+        <div class="grid grid-cols-2 gap-3 lg:gap-4">
+            <div class="bg-zinc-800/40 rounded-xl p-4 text-center border border-zinc-700/50">
+                <p class="text-3xl lg:text-2xl font-heading font-bold text-zinc-100">{{ $challenge->members_count }}</p>
+                <p class="text-[11px] lg:text-xs text-zinc-500 mt-0.5">{{ Str::plural('Member', $challenge->members_count) }}</p>
+            </div>
+            <div class="bg-zinc-800/40 rounded-xl p-4 text-center border border-zinc-700/50">
+                <p class="text-3xl lg:text-2xl font-heading font-bold text-emerald-400">{{ $challenge->points_per_completion }}</p>
+                <p class="text-[11px] lg:text-xs text-zinc-500 mt-0.5">Points / check-in</p>
+            </div>
+        </div>
+
+        @if ($isMember)
+            <div class="bg-zinc-800/40 rounded-xl p-4 lg:p-3 flex items-center justify-between border border-zinc-700/50">
+                <div>
+                    <p class="text-[11px] lg:text-[10px] text-zinc-500 uppercase tracking-wider">Invite code</p>
+                    <p class="font-heading font-bold text-zinc-100 tracking-widest text-lg lg:text-base">{{ $challenge->join_code }}</p>
+                </div>
+                <p class="text-xs text-zinc-500">Share this to invite friends</p>
+            </div>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 lg:p-3">
+                <p class="text-xs text-zinc-400 mb-0.5">Linked habit</p>
+                <p class="text-base lg:text-sm font-medium text-zinc-100">{{ $this->membership->habit?->name ?? '—' }}</p>
+            </div>
+        @endif
+
+        {{-- Podium + Leaderboard --}}
+        @if (count($leaderboard))
+            <div class="border-t border-zinc-800/50 pt-5 lg:pt-4">
+                <p class="font-heading text-base lg:text-sm font-semibold text-zinc-200 mb-4 lg:mb-3">Leaderboard</p>
+
+                <div class="flex items-end justify-center gap-2 mb-6 lg:mb-4">
+                    @if (isset($leaderboard[1]))
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-zinc-700 flex items-center justify-center font-heading font-bold text-sm text-zinc-200">{{ strtoupper(mb_substr($leaderboard[1]['name'], 0, 1)) }}</div>
+                            <p class="text-[11px] lg:text-[10px] text-zinc-400 mt-1 max-w-[64px] lg:max-w-[56px] truncate text-center">{{ $leaderboard[1]['name'] }}</p>
+                            <div class="w-16 h-12 lg:w-14 lg:h-10 bg-zinc-800 rounded-t-md flex items-center justify-center text-sm lg:text-xs font-bold text-zinc-300 mt-1.5 lg:mt-1">{{ $leaderboard[1]['points'] }}</div>
+                        </div>
+                    @endif
+
+                    @if (isset($leaderboard[0]))
+                        <div class="flex flex-col items-center">
+                            <span class="text-xl lg:text-lg">🏆</span>
+                            <div class="w-12 h-12 lg:w-10 lg:h-10 rounded-full bg-amber-400 flex items-center justify-center font-heading font-bold text-base lg:text-sm text-zinc-900">{{ strtoupper(mb_substr($leaderboard[0]['name'], 0, 1)) }}</div>
+                            <p class="text-[11px] lg:text-[10px] text-zinc-200 mt-1 max-w-[64px] lg:max-w-[56px] truncate text-center font-medium">{{ $leaderboard[0]['name'] }}</p>
+                            <div class="w-16 h-16 lg:w-14 lg:h-14 bg-amber-500/20 rounded-t-md flex items-center justify-center text-base lg:text-sm font-bold text-amber-400 mt-1.5 lg:mt-1">{{ $leaderboard[0]['points'] }}</div>
+                        </div>
+                    @endif
+
+                    @if (isset($leaderboard[2]))
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-zinc-700 flex items-center justify-center font-heading font-bold text-sm text-zinc-200">{{ strtoupper(mb_substr($leaderboard[2]['name'], 0, 1)) }}</div>
+                            <p class="text-[11px] lg:text-[10px] text-zinc-400 mt-1 max-w-[64px] lg:max-w-[56px] truncate text-center">{{ $leaderboard[2]['name'] }}</p>
+                            <div class="w-16 h-10 lg:w-14 lg:h-8 bg-zinc-800 rounded-t-md flex items-center justify-center text-sm lg:text-xs font-bold text-zinc-300 mt-1.5 lg:mt-1">{{ $leaderboard[2]['points'] }}</div>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="space-y-1.5 lg:space-y-1 max-h-56 lg:max-h-48 overflow-y-auto">
+                    @foreach ($leaderboard as $i => $entry)
+                        <div wire:key="lb-{{ $entry['user_id'] }}"
+                             class="flex items-center justify-between px-3 py-2.5 lg:px-2 lg:py-1.5 rounded-lg text-base lg:text-sm
+                                    {{ $entry['user_id'] === auth()->id() ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-300' }}">
+                            <span class="flex items-center gap-3 lg:gap-2">
+                                <span class="w-5 lg:w-4 text-xs lg:text-xs text-zinc-500">{{ $i + 1 }}</span>
+                                {{ $entry['name'] }}
+                            </span>
+                            <span class="font-medium">{{ $entry['points'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        @if ($isMember)
+            <div class="pt-4 lg:pt-2">
+                <button wire:click="confirmLeave"
+                        class="w-full py-3.5 lg:py-2 text-base lg:text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition border border-red-500/20">
+                    Leave Challenge
+                </button>
+            </div>
+        @else
+            <div class="border-t border-zinc-800/50 pt-5 lg:pt-4 space-y-4 lg:space-y-3">
+                <p class="font-heading text-base lg:text-sm font-semibold text-zinc-200">Join this challenge</p>
+                <p class="text-sm text-zinc-400 leading-relaxed">
+                    Joining adds <span class="text-zinc-200 font-medium">"{{ $challenge->habit_name }}"</span> to your Habits — check in daily to earn points here.
+                </p>
+                <button wire:click="join"
+                        class="w-full py-3.5 lg:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg transition text-base lg:text-sm mt-2">
+                    Join Challenge
+                </button>
+            </div>
+        @endif
+    </div>
+@else
+    <div class="hidden lg:flex h-full items-center justify-center p-8 text-center text-zinc-600 text-sm">
+        Select a challenge to view details, or click "Create" to start a new one.
+    </div>
+@endif

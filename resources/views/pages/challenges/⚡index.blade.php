@@ -85,6 +85,12 @@ new class extends Component {
             ->first();
     }
 
+        #[Computed]
+    public function isCreator(): bool
+    {
+        return $this->selectedChallenge && $this->selectedChallenge->creator_id === Auth::id();
+    }
+
     #[Computed]
     public function challengeLeaderboard(): array
     {
@@ -191,6 +197,26 @@ new class extends Component {
         Flux::toast(text: 'Successfully joined the challenge.', variant: 'success');
 
         unset($this->discoverChallenges, $this->myChallenges, $this->membership);
+    }
+
+    public function toggleVisibility(): void
+    {
+        $challenge = $this->selectedChallenge;
+
+        if (! $challenge || $challenge->creator_id !== Auth::id()) {
+            return;
+        }
+
+        $challenge->update([
+            'visibility' => $challenge->visibility === 'public' ? 'private' : 'public',
+        ]);
+
+        Flux::toast(
+            text: 'Challenge is now ' . $challenge->visibility . '.',
+            variant: 'success'
+        );
+
+        unset($this->discoverChallenges, $this->myChallenges);
     }
 
     public function confirmLeave(): void
@@ -434,6 +460,13 @@ new class extends Component {
                         </svg>
                     </button>
                 </div>
+
+                @if ($this->isCreator)
+                    <button wire:click="toggleVisibility"
+                            class="text-xs px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition">
+                        Make {{ $challenge->visibility === 'public' ? 'Private' : 'Public' }}
+                    </button>
+                @endif
 
                 @if ($challenge->description)
                     <p class="text-sm text-zinc-300">{{ $challenge->description }}</p>

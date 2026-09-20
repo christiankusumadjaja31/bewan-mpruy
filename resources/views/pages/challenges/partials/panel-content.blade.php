@@ -9,7 +9,7 @@
             </button>
         </div>
 
-        <div class="space-y-5 lg:space-y-5">
+        <div class="space-y-5">
             <div>
                 <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">Challenge Name</label>
                 <input type="text" wire:model="name" placeholder="e.g., 30 Days Study Duel"
@@ -51,7 +51,7 @@
                 Make this challenge private (invite-only)
             </label>
 
-            <div class="border-t border-zinc-800/50 pt-5 lg:pt-5">
+            <div class="border-t border-zinc-800/50 pt-5">
                 <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">What should participants do?</label>
                 <input type="text" wire:model="habit_name" placeholder="e.g., Study 1 hour"
                        class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition placeholder:text-zinc-700">
@@ -71,29 +71,49 @@
 @elseif ($this->selectedChallenge)
     @php $challenge = $this->selectedChallenge; $isMember = (bool) $this->membership; $leaderboard = $this->challengeLeaderboard; @endphp
     <div class="p-5 lg:p-8 space-y-5 lg:space-y-6 pb-28 lg:pb-8">
-        <div class="flex items-start justify-between border-b border-zinc-800 pb-4">
+
+        <div class="flex items-start justify-between border-b border-zinc-800 pb-4 lg:pb-5">
             <div>
                 <p class="font-heading text-2xl lg:text-xl font-semibold text-zinc-100">{{ $challenge->name }}</p>
-                <p class="text-[11px] lg:text-xs text-zinc-500 mt-1">
-                    {{ $challenge->start_date?->format('d M') }} &ndash; {{ $challenge->end_date?->format('d M Y') }}
-                    @if ($challenge->visibility === 'private')
-                        &middot; <span class="text-amber-400">Private</span>
-                    @endif
-                </p>
+
+                <div class="flex items-center gap-2 mt-1.5 lg:mt-2 flex-wrap">
+                    <p class="text-[11px] lg:text-xs text-zinc-400 flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 opacity-70">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                        </svg>
+                        {{ $challenge->start_date?->format('d M') }} &ndash; {{ $challenge->end_date?->format('d M Y') }}
+                    </p>
+
+                    {{-- Indikator visibility — selalu tampil buat siapa aja, cuma label, nggak bisa diklik --}}
+                    <span class="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase border
+                                {{ $challenge->visibility === 'private'
+                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                    : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' }}">
+                        @if ($challenge->visibility === 'private')
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                            Private
+                        @else
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                            Public
+                        @endif
+                    </span>
+                </div>
+
+                {{-- Aksi ubah visibility — cuma buat creator --}}
+                @if ($this->isCreator)
+                    <button wire:click="toggleVisibility"
+                            class="text-[11px] text-zinc-500 hover:text-zinc-300 underline underline-offset-2 mt-2 transition">
+                        Change to {{ $challenge->visibility === 'public' ? 'Private' : 'Public' }}
+                    </button>
+                @endif
             </div>
+
             <button wire:click="$set('selectedChallengeId', null)" class="text-zinc-400 hover:text-zinc-200 transition bg-zinc-800 hover:bg-zinc-700 p-2 lg:p-1.5 rounded-md mt-1">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
-
-        @if ($this->isCreator)
-            <button wire:click="toggleVisibility"
-                    class="text-sm lg:text-xs px-4 py-2 lg:px-3 lg:py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition">
-                Make {{ $challenge->visibility === 'public' ? 'Private' : 'Public' }}
-            </button>
-        @endif
 
         @if ($challenge->description)
             <p class="text-base lg:text-sm text-zinc-300">{{ $challenge->description }}</p>
@@ -163,7 +183,7 @@
                              class="flex items-center justify-between px-3 py-2.5 lg:px-2 lg:py-1.5 rounded-lg text-base lg:text-sm
                                     {{ $entry['user_id'] === auth()->id() ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-300' }}">
                             <span class="flex items-center gap-3 lg:gap-2">
-                                <span class="w-5 lg:w-4 text-xs lg:text-xs text-zinc-500">{{ $i + 1 }}</span>
+                                <span class="w-5 lg:w-4 text-xs text-zinc-500">{{ $i + 1 }}</span>
                                 {{ $entry['name'] }}
                             </span>
                             <span class="font-medium">{{ $entry['points'] }}</span>
@@ -194,7 +214,7 @@
         @endif
     </div>
 @else
-    <div class="hidden lg:flex h-full items-center justify-center p-8 text-center text-zinc-600 text-sm">
+    <div class="flex h-full items-center justify-center p-8 text-center text-zinc-600 text-sm">
         Select a challenge to view details, or click "Create" to start a new one.
     </div>
 @endif

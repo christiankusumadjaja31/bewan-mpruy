@@ -10,6 +10,7 @@ use Livewire\Component;
 use App\Models\ChallengeMember;
 use App\Models\Challenge;
 use App\Models\ChallengeLog;
+use App\Models\HabitStreakFreeze;
 use Flux\Flux;
 
 new class extends Component {
@@ -103,7 +104,7 @@ new class extends Component {
         return (int) round(($completed / $this->habits->count()) * 100);
     }
 
-        public function toggleDay(int $habitId, string $date): void
+    public function toggleDay(int $habitId, string $date): void
     {
         if ($date > today()->toDateString()) {
             return;
@@ -167,35 +168,106 @@ new class extends Component {
         }
     }
 
-    public function isChallengeLinked(Habit $habit): bool
+    public function challengeOwnerType(Habit $habit): ?string
     {
-        return ChallengeMember::where('user_id', Auth::id())
+        $membership = ChallengeMember::where('user_id', Auth::id())
             ->where('habit_id', $habit->id)
             ->whereHas('challenge', fn ($q) => $q->where('status', 'active')->whereDate('end_date', '>=', today()))
-            ->exists();
+            ->with('challenge')
+            ->first();
+
+        if (! $membership || ! $membership->challenge) {
+            return null;
+        }
+
+        return $membership->challenge->creator_id === Auth::id() ? 'own' : 'joined';
     }
 
     public function currentStreak(Habit $habit): int
     {
         $completedDates = $habit->logs()
             ->where('completed', true)
-            ->orderByDesc('date')
             ->pluck('date')
             ->map(fn ($d) => $d->toDateString())
             ->toArray();
 
+        $frozenDates = HabitStreakFreeze::where('habit_id', $habit->id)
+            ->pluck('date')
+            ->map(fn ($d) => $d->toDateString())
+            ->toArray();
+
+        $countedDates = array_unique(array_merge($completedDates, $frozenDates));
+
         $cursor = today();
-        if (! in_array($cursor->toDateString(), $completedDates)) {
+        if (! in_array($cursor->toDateString(), $countedDates)) {
             $cursor = $cursor->subDay();
         }
 
         $streak = 0;
-        while (in_array($cursor->toDateString(), $completedDates)) {
+        while (in_array($cursor->toDateString(), $countedDates)) {
             $streak++;
             $cursor = $cursor->subDay();
         }
 
         return $streak;
+    }
+
+    public function isFrozen(Habit $habit, string $date): bool
+    {
+        return HabitStreakFreeze::where('habit_id', $habit->id)->whereDate('date', $date)->exists();
+    }
+
+    public function freezesUsedThisMonth(Habit $habit): int
+    {
+        return HabitStreakFreeze::where('habit_id', $habit->id)
+            ->whereYear('date', today()->year)
+            ->whereMonth('date', today()->month)
+            ->count();
+    }
+
+    public function freezesRemaining(Habit $habit): int
+    {
+        return max(0, 3 - $this->freezesUsedThisMonth($habit));
+    }
+
+    public function canUseFreeze(Habit $habit): bool
+    {
+        $yesterday = today()->subDay()->toDateString();
+        $dayBefore = today()->subDays(2)->toDateString();
+
+        $yesterdayCounted = $habit->logs()->whereDate('date', $yesterday)->where('completed', true)->exists()
+            || $this->isFrozen($habit, $yesterday);
+
+        if ($yesterdayCounted) {
+            return false;
+        }
+
+        $dayBeforeCounted = $habit->logs()->whereDate('date', $dayBefore)->where('completed', true)->exists()
+            || $this->isFrozen($habit, $dayBefore);
+
+        if (! $dayBeforeCounted) {
+            return false;
+        }
+
+        return $this->freezesRemaining($habit) > 0;
+    }
+
+    public function useFreeze(int $habitId): void
+    {
+        $habit = Auth::user()->habits()->findOrFail($habitId);
+
+        if (! $this->canUseFreeze($habit)) {
+            return;
+        }
+
+        HabitStreakFreeze::create([
+            'habit_id' => $habit->id,
+            'date'     => today()->subDay()->toDateString(),
+        ]);
+
+        Flux::toast(text: 'Streak saved! Freeze used.', variant: 'success');
+
+        unset($this->habits, $this->selectedHabit);
     }
 
     public function totalCompletions(Habit $habit): int
@@ -220,6 +292,11 @@ new class extends Component {
     public function edit(int $id): void
     {
         $habit = Auth::user()->habits()->findOrFail($id);
+
+        if ($this->challengeOwnerType($habit) === 'joined') {
+            Flux::toast(text: "Locked — this habit follows the challenge creator's rules. Leave the challenge to unlock it.", variant: 'danger');
+            return;
+        }
 
         $this->editingId  = $habit->id;
         $this->name       = $habit->name;
@@ -262,6 +339,13 @@ new class extends Component {
 
     public function confirmDelete(int $id): void
     {
+        $habit = Auth::user()->habits()->findOrFail($id);
+
+        if ($this->challengeOwnerType($habit) === 'joined') {
+            Flux::toast(text: "Can't delete a habit linked to someone else's challenge. Leave the challenge instead.", variant: 'danger');
+            return;
+        }
+
         $this->confirmingDeleteId = $id;
         $this->modal('confirm-delete')->show();
     }
@@ -306,6 +390,12 @@ new class extends Component {
             ->map(fn ($d) => $d->toDateString())
             ->toArray();
 
+        $frozenDates = HabitStreakFreeze::where('habit_id', $this->selectedHabit->id)
+            ->whereBetween('date', [$gridStart, $gridEnd])
+            ->pluck('date')
+            ->map(fn ($d) => $d->toDateString())
+            ->toArray();
+
         $weeks  = [];
         $cursor = $gridStart->copy();
 
@@ -318,6 +408,7 @@ new class extends Component {
                     'inMonth'   => $cursor->month === $monthStart->month,
                     'isToday'   => $cursor->isToday(),
                     'completed' => in_array($cursor->toDateString(), $completedDates),
+                    'frozen'    => in_array($cursor->toDateString(), $frozenDates),
                 ];
                 $cursor->addDay();
             }
@@ -389,6 +480,7 @@ new class extends Component {
         {{-- Daftar Habit --}}
         <div class="space-y-3 lg:space-y-2 pb-32 lg:pb-20">
             @forelse ($this->habits as $habit)
+                @php $challengeType = $this->challengeOwnerType($habit); $isLocked = $challengeType === 'joined'; @endphp
                 <div wire:key="habit-{{ $habit->id }}"
                      class="flex items-center bg-zinc-900 rounded-xl py-3.5 px-3 lg:py-3 lg:px-3 transition group
                           {{ $selectedHabitId === $habit->id ? 'bg-zinc-800/80 ring-1 ring-emerald-500/50' : 'hover:bg-zinc-800/60' }}">
@@ -403,13 +495,17 @@ new class extends Component {
                         <div class="min-w-0 flex-1">
                             <p class="font-heading text-base lg:text-[15px] font-medium text-zinc-100 truncate group-hover:text-emerald-400 transition flex items-center gap-1.5">
                                 <span class="truncate">{{ $habit->name }}</span>
-                                @if ($this->isChallengeLinked($habit))
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 lg:w-3.5 lg:h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="currentColor" title="Linked to a challenge">
+                                @if ($challengeType === 'own')
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 lg:w-3.5 lg:h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="currentColor" title="From a challenge you created">
                                         <path d="M5 4h14a1 1 0 011 1v2a4 4 0 01-4 4h-.1A6.002 6.002 0 0113 15.917V18h2a1 1 0 011 1v1H8v-1a1 1 0 011-1h2v-2.083A6.002 6.002 0 018.1 11H8a4 4 0 01-4-4V5a1 1 0 011-1zm0 2v1a2 2 0 002 2 6.02 6.02 0 010-3H5zm14 0h-2a6.02 6.02 0 010 3 2 2 0 002-2V6z"/>
+                                    </svg>
+                                @elseif ($challengeType === 'joined')
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 lg:w-3.5 lg:h-3.5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" title="Locked — follows the challenge creator's rules">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                                     </svg>
                                 @endif
                             </p>
-                            
+
                             {{-- Menggunakan div & truncate agar teks panjang terpotong rapi dengan "..." jika layar sangat sempit --}}
                             <div class="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-2 lg:gap-3 font-medium truncate">
                                 <span class="flex items-center gap-1 shrink-0">
@@ -435,20 +531,25 @@ new class extends Component {
                         {{-- Lingkaran Check-in --}}
                         <div class="flex items-center gap-1.5 lg:w-full lg:grid lg:grid-cols-7 lg:justify-items-center">
                             @foreach ($this->days as $day)
-                                @php $done = $this->isCompleted($habit, $day['date']); @endphp
+                                @php
+                                    $done = $this->isCompleted($habit, $day['date']);
+                                    $frozen = ! $done && $this->isFrozen($habit, $day['date']);
+                                @endphp
                                 <button wire:click="toggleDay({{ $habit->id }}, '{{ $day['date'] }}')"
                                         wire:key="day-{{ $habit->id }}-{{ $day['date'] }}"
-                                        @disabled($day['isFuture'])
-                                        class="w-[32px] h-[32px] lg:w-[26px] lg:h-[26px] rounded-full items-center justify-center transition-all duration-200 shrink-0
+                                        @disabled(! $day['isToday'])
+                                        class="w-[32px] h-[32px] lg:w-[26px] lg:h-[26px] rounded-full items-center justify-center transition-all duration-200 shrink-0 text-[10px]
                                                {{ $day['isToday'] ? 'flex' : 'hidden lg:flex' }}
-                                               {{ $day['isFuture'] ? 'opacity-30 cursor-not-allowed' : '' }}
+                                               {{ ! $day['isToday'] ? 'opacity-60 cursor-not-allowed' : '' }}
                                                {{ $done
                                                    ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                                                   : 'bg-zinc-700/60 hover:bg-zinc-600' }}">
+                                                   : ($frozen ? 'bg-sky-500/70 text-white' : 'bg-zinc-700/60 hover:bg-zinc-600') }}">
                                     @if($done)
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3.5" stroke="currentColor" class="w-4 h-4 lg:w-3.5 lg:h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                         </svg>
+                                    @elseif($frozen)
+                                        ❄️
                                     @endif
                                 </button>
                             @endforeach
@@ -456,15 +557,15 @@ new class extends Component {
 
                         {{-- Tombol Edit & Delete HANYA muncul di Desktop --}}
                         <div class="hidden lg:flex items-center gap-2 ml-4 shrink-0">
-                            <button wire:click="edit({{ $habit->id }})" title="Edit Habit"
-                                    class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 transition bg-zinc-800 hover:bg-zinc-700">
+                            <button wire:click="edit({{ $habit->id }})" title="{{ $isLocked ? 'Locked by challenge' : 'Edit Habit' }}"
+                                    class="p-1.5 rounded-lg transition bg-zinc-800 {{ $isLocked ? 'text-zinc-600' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                 </svg>
                             </button>
 
-                            <button wire:click="confirmDelete({{ $habit->id }})" title="Delete Habit"
-                                    class="p-1.5 rounded-lg text-red-400 hover:text-red-500 transition bg-zinc-800 hover:bg-zinc-700">
+                            <button wire:click="confirmDelete({{ $habit->id }})" title="{{ $isLocked ? 'Locked by challenge' : 'Delete Habit' }}"
+                                    class="p-1.5 rounded-lg transition bg-zinc-800 {{ $isLocked ? 'text-zinc-600' : 'text-red-400 hover:text-red-500 hover:bg-zinc-700' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                                 </svg>
@@ -484,7 +585,7 @@ new class extends Component {
     {{-- ============================== --}}
     {{-- SISI KANAN (1/3 LAYAR) - PANEL DETAIL --}}
     {{-- ============================== --}}
-        {{-- Desktop: panel statis di kanan --}}
+    {{-- Desktop: panel statis di kanan --}}
     <div class="hidden lg:flex lg:w-1/3 h-full overflow-y-auto bg-zinc-900 border-l border-zinc-800/80 shadow-xl">
         <div class="w-full">
             @include('pages.habits.partials.panel-content')
@@ -499,7 +600,6 @@ new class extends Component {
     @endif
 
     <flux:modal name="confirm-delete" class="w-full max-w-sm">
-        
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete this habit?</flux:heading>

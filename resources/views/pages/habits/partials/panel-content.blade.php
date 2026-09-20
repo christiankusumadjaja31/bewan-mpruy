@@ -68,7 +68,10 @@
     </div>
 
 @elseif ($this->selectedHabit)
-    @php $habit = $this->selectedHabit; @endphp
+    @php
+        $habit = $this->selectedHabit;
+        $isLocked = $this->challengeOwnerType($habit) === 'joined';
+    @endphp
     <div class="p-5 lg:p-8 space-y-5 lg:space-y-6 pb-28 lg:pb-8">
         <div class="flex items-start justify-between border-b border-zinc-800 pb-4">
             <div>
@@ -101,6 +104,19 @@
             </div>
         </div>
 
+        @if ($this->canUseFreeze($habit))
+            <div class="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-sky-400">Missed yesterday?</p>
+                    <p class="text-xs text-zinc-400 mt-0.5">Use a Streak Freeze to keep it alive. {{ $this->freezesRemaining($habit) }} left this month.</p>
+                </div>
+                <button wire:click="useFreeze({{ $habit->id }})"
+                        class="shrink-0 px-3 py-1.5 text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-zinc-950 rounded-lg transition">
+                    ❄️ Freeze
+                </button>
+            </div>
+        @endif
+
         <div class="border-t border-zinc-800/50 pt-5 lg:pt-4">
             <div class="flex items-center justify-between mb-4 lg:mb-3">
                 <button wire:click="previousMonth" class="p-2 lg:p-1 rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition">
@@ -127,7 +143,8 @@
                             <div class="w-8 h-8 lg:w-6 lg:h-6 rounded-full flex items-center justify-center text-sm lg:text-[11px]
                                         {{ ! $cell['inMonth'] ? 'text-zinc-700' : 'text-zinc-300' }}
                                         {{ $cell['completed'] ? 'bg-emerald-500 text-white font-semibold shadow-[0_0_8px_rgba(16,185,129,0.3)]' : '' }}
-                                        {{ $cell['isToday'] && ! $cell['completed'] ? 'ring-1 ring-emerald-500' : '' }}">
+                                        {{ ! $cell['completed'] && $cell['frozen'] ? 'bg-sky-500/70 text-white font-semibold' : '' }}
+                                        {{ $cell['isToday'] && ! $cell['completed'] && ! $cell['frozen'] ? 'ring-1 ring-emerald-500' : '' }}">
                                 {{ $cell['day'] }}
                             </div>
                         </div>
@@ -160,13 +177,21 @@
             </div>
         </div>
 
+        @if ($isLocked)
+            <p class="text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+                Locked — this habit follows the challenge creator's rules. Leave the challenge to unlock it.
+            </p>
+        @endif
+
         <div class="flex gap-3 pt-6 lg:pt-4">
-            <button wire:click="edit({{ $habit->id }})"
-                    class="flex-1 py-3 lg:py-2 text-base lg:text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg transition border border-zinc-700">
+            <button wire:click="edit({{ $habit->id }})" @disabled($isLocked)
+                    class="flex-1 py-3 lg:py-2 text-base lg:text-sm font-medium rounded-lg transition border
+                           {{ $isLocked ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700' }}">
                 Edit
             </button>
-            <button wire:click="confirmDelete({{ $habit->id }})"
-                    class="py-3 px-5 lg:py-2 lg:px-4 text-base lg:text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition border border-red-500/20">
+            <button wire:click="confirmDelete({{ $habit->id }})" @disabled($isLocked)
+                    class="py-3 px-5 lg:py-2 lg:px-4 text-base lg:text-sm font-medium rounded-lg transition border
+                           {{ $isLocked ? 'bg-zinc-900 text-zinc-700 border-zinc-800 cursor-not-allowed' : 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 lg:w-4 lg:h-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                 </svg>

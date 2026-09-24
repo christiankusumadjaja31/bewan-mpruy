@@ -67,4 +67,19 @@ class User extends Authenticatable
         return $this->belongsToMany(Challenge::class, 'challenge_members')
                     ->withPivot('joined_at', 'habit_id');
     }
+
+    public function characters(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Character::class, 'user_characters')->withPivot('unlocked_at');
+    }
+
+    public function equippedCharacter(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Character::class, 'equipped_character_id');
+    }
+
+    public function ownsCharacter(int $characterId): bool
+    {
+        return $this->characters()->where('characters.id', $characterId)->exists();
+    }
 }

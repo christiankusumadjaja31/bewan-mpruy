@@ -104,7 +104,7 @@ new class extends Component {
         return (int) round(($completed / $this->habits->count()) * 100);
     }
 
-    public function toggleDay(int $habitId, string $date): void
+   public function toggleDay(int $habitId, string $date): void
     {
         if ($date > today()->toDateString()) {
             return;
@@ -129,16 +129,27 @@ new class extends Component {
             ]);
         }
 
+        if ($log->completed && ! $log->coin_awarded_at) {
+            Auth::user()->increment('coins', 2);
+            $log->coin_awarded_at = now();
+            $log->save();
+        }
+
         $this->syncChallengePoints($habit, $log);
 
         unset($this->habits, $this->selectedHabit);
     }
 
-    private function syncChallengePoints(Habit $habit, HabitLog $log): void
+        private function syncChallengePoints(Habit $habit, HabitLog $log): void
     {
         $memberships = ChallengeMember::where('user_id', Auth::id())
             ->where('habit_id', $habit->id)
             ->get();
+
+        $character = Auth::user()->equippedCharacter;
+        $multiplier = ($character && $character->ability_type === 'points_bonus')
+            ? 1 + $character->ability_value
+            : 1;
 
         foreach ($memberships as $membership) {
             $challenge = Challenge::find($membership->challenge_id);
@@ -156,7 +167,7 @@ new class extends Component {
                     ],
                     [
                         'habit_log_id' => $log->id,
-                        'points'       => $challenge->points_per_completion,
+                        'points'       => (int) round($challenge->points_per_completion * $multiplier),
                     ]
                 );
             } else {
@@ -227,7 +238,14 @@ new class extends Component {
 
     public function freezesRemaining(Habit $habit): int
     {
-        return max(0, 3 - $this->freezesUsedThisMonth($habit));
+        $base = 3;
+
+        $character = Auth::user()->equippedCharacter;
+        if ($character && $character->ability_type === 'freeze_bonus') {
+            $base += (int) $character->ability_value;
+        }
+
+        return max(0, $base - $this->freezesUsedThisMonth($habit));
     }
 
     public function canUseFreeze(Habit $habit): bool

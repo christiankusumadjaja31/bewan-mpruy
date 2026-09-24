@@ -26,6 +26,11 @@
                     <a href="{{ route('challenges.index') }}" wire:navigate title="Challenge"
                        class="flex h-10 w-10 -ml-0.5 items-center justify-center rounded-lg transition {{ request()->routeIs('challenges.*') ? 'text-white' : 'text-zinc-500 hover:text-zinc-300' }}">
                         <flux:icon.trophy class="size-5" />
+
+                    <!-- Shop -->
+                    <a href="{{ route('shop.index') }}" wire:navigate title="Shop"
+                    class="flex h-10 w-10 -ml-0.5 items-center justify-center rounded-lg transition {{ request()->routeIs('shop.*') ? 'text-white' : 'text-zinc-500 hover:text-zinc-300' }}">
+                        <flux:icon.shopping-bag class="size-5" />
                     </a>
                 </nav>
             </div>

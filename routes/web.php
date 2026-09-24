@@ -16,4 +16,8 @@ Route::livewire('/challenges', 'pages::challenges.index')
     ->middleware(['auth', 'verified'])
     ->name('challenges.index');
 
+Route::livewire('/shop', 'pages::shop.index')
+    ->middleware(['auth', 'verified'])
+    ->name('shop.index');
+
 require __DIR__.'/settings.php';

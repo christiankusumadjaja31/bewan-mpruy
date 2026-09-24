@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Character extends Model
 {
-    protected $fillable = ['key', 'name', 'emoji', 'description', 'ability_type', 'ability_value', 'price_coins'];
+        protected $fillable = ['key', 'name', 'image', 'description', 'ability_type', 'ability_value', 'price_coins'];
 
     public function owners(): BelongsToMany
     {

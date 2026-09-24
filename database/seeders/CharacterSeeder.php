@@ -11,7 +11,7 @@ class CharacterSeeder extends Seeder
     {
         Character::updateOrCreate(['key' => 'myth'], [
             'name'          => 'My-th',
-            'emoji'         => '🐭',
+            'image'         => '/images/characters/myth.png',
             'description'   => 'A resourceful little mouse who always keeps an extra reserve stashed away. Grants +1 extra Streak Freeze per month, for every habit.',
             'ability_type'  => 'freeze_bonus',
             'ability_value' => 1,
@@ -20,7 +20,7 @@ class CharacterSeeder extends Seeder
 
         Character::updateOrCreate(['key' => 'maou'], [
             'name'          => 'Maou',
-            'emoji'         => '🐱',
+            'image'         => '/images/characters/maou.png',
             'description'   => 'A commanding cat with an aura of dominance. Grants +10% bonus points on every challenge check-in.',
             'ability_type'  => 'points_bonus',
             'ability_value' => 0.10,

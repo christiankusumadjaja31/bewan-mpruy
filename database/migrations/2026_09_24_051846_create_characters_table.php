@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('key')->unique();
             $table->string('name');
-            $table->string('emoji');
             $table->text('description');
             $table->string('ability_type');
             $table->decimal('ability_value', 8, 2);

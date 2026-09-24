@@ -130,7 +130,14 @@ new class extends Component {
         }
 
         if ($log->completed && ! $log->coin_awarded_at) {
-            Auth::user()->increment('coins', 2);
+            $coinsToAward = 2;
+
+            $character = Auth::user()->equippedCharacter;
+            if ($character && $character->ability_type === 'checkin_coin_bonus') {
+                $coinsToAward += $character->ability_value;
+            }
+
+            Auth::user()->increment('coins', $coinsToAward);
             $log->coin_awarded_at = now();
             $log->save();
         }
@@ -140,16 +147,11 @@ new class extends Component {
         unset($this->habits, $this->selectedHabit);
     }
 
-        private function syncChallengePoints(Habit $habit, HabitLog $log): void
+    private function syncChallengePoints(Habit $habit, HabitLog $log): void
     {
         $memberships = ChallengeMember::where('user_id', Auth::id())
             ->where('habit_id', $habit->id)
             ->get();
-
-        $character = Auth::user()->equippedCharacter;
-        $multiplier = ($character && $character->ability_type === 'points_bonus')
-            ? 1 + $character->ability_value
-            : 1;
 
         foreach ($memberships as $membership) {
             $challenge = Challenge::find($membership->challenge_id);
@@ -167,7 +169,7 @@ new class extends Component {
                     ],
                     [
                         'habit_log_id' => $log->id,
-                        'points'       => (int) round($challenge->points_per_completion * $multiplier),
+                        'points'       => $challenge->points_per_completion,
                     ]
                 );
             } else {

@@ -157,17 +157,21 @@ new class extends Component {
                     @forelse ($this->characters() as $c)
                         <button wire:click="selectCharacter({{ $c->id }})" wire:key="char-{{ $c->id }}"
                                 class="relative bg-zinc-900 border rounded-xl p-4 text-center transition
-                                       {{ $selectedCharacterId === $c->id ? 'border-emerald-500 ring-1 ring-emerald-500/50' : 'border-zinc-800 hover:border-zinc-700' }}
+                                       {{ $selectedCharacterId === $c->id ? 'border-emerald-500 ring-1 ring-emerald-500/50' : ($c->tier === 'epic' ? 'border-purple-500/40 hover:border-purple-400/60' : 'border-zinc-800 hover:border-zinc-700') }}
+                                       {{ $c->tier === 'epic' ? 'bg-gradient-to-b from-purple-950/40 to-zinc-900' : '' }}
                                        {{ $c->is_owned ? 'bg-zinc-900/50' : '' }}">
-                            
+
                             {{-- Avatar Karakter (Efek Grayscale jika belum punya) --}}
                             <div class="relative w-14 h-14 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-2 overflow-hidden
-                                        {{ $c->is_owned ? 'ring-2 ring-emerald-500/30' : '' }}">
+                                        {{ $c->is_owned ? 'ring-2 ring-emerald-500/30' : ($c->tier === 'epic' ? 'ring-2 ring-purple-500/40' : '') }}">
                                 <img src="{{ $c->image }}" alt="{{ $c->name }}" 
                                      class="block w-full h-full object-cover object-center transition {{ ! $c->is_owned ? 'grayscale opacity-60' : '' }}">
                             </div>
-                            
-                            <p class="text-xs font-medium text-zinc-100 mb-1.5">{{ $c->name }}</p>
+
+                            <p class="text-xs font-medium text-zinc-100 mb-0.5">{{ $c->name }}</p>
+                            <p class="text-[10px] {{ $c->tier === 'epic' ? 'text-purple-400' : 'text-zinc-600' }} mb-1.5">
+                                {{ str_repeat('★', $c->stars()) }}
+                            </p>
                             
                             {{-- Penanda Status --}}
                             <div>

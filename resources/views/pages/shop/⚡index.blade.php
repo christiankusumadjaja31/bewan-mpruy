@@ -161,16 +161,19 @@ new class extends Component {
                                        {{ $c->tier === 'epic' ? 'bg-gradient-to-b from-purple-950/40 to-zinc-900' : '' }}
                                        {{ $c->is_owned ? 'bg-zinc-900/50' : '' }}">
 
-                            {{-- Avatar Karakter (Efek Grayscale jika belum punya) --}}
-                            <div class="relative w-14 h-14 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-2 overflow-hidden
-                                        {{ Auth::user()->equipped_character_id === $c->id ? 'ring-2 ring-emerald-400' : ($c->is_owned ? 'ring-2 ring-emerald-500/30' : ($c->tier === 'epic' ? 'ring-2 ring-purple-500/40' : '')) }}">
-                                <img src="{{ $c->image }}" alt="{{ $c->name }}" 
-                                     class="block w-full h-full object-cover object-center transition {{ ! $c->is_owned ? 'grayscale opacity-60' : '' }}">
+                            {{-- Wrapper luar untuk menahan posisi absolut badge (tanpa overflow-hidden) --}}
+                            <div class="relative w-14 h-14 mx-auto mb-2">
+                                
+                                {{-- Avatar Karakter dengan overflow-hidden agar gambar membulat --}}
+                                <div class="w-full h-full rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden
+                                            {{ Auth::user()->equipped_character_id === $c->id ? 'ring-2 ring-emerald-400' : ($c->is_owned ? 'ring-2 ring-emerald-500/30' : ($c->tier === 'epic' ? 'ring-2 ring-purple-500/40' : '')) }}">
+                                    <img src="{{ $c->image }}" alt="{{ $c->name }}" 
+                                         class="block w-full h-full object-cover object-center transition {{ ! $c->is_owned ? 'grayscale opacity-60' : '' }}">
+                                </div>
+
+                                {{-- Badge Equipped dipindah ke luar agar tidak terpotong overflow-hidden --}}
                                 @if (Auth::user()->equipped_character_id === $c->id)
-                                    <div class="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center border-2 border-zinc-900">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3.5" stroke="currentColor" class="w-2.5 h-2.5 text-zinc-950">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
+                                    <div class="absolute -bottom-1 -right-1 z-10 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center border-2 border-zinc-900">
                                     </div>
                                 @endif
                             </div>

@@ -91,7 +91,7 @@ new class extends Component {
         return $this->selectedChallenge && $this->selectedChallenge->creator_id === Auth::id();
     }
 
-    #[Computed]
+        #[Computed]
     public function challengeLeaderboard(): array
     {
         if (! $this->selectedChallengeId) {
@@ -104,12 +104,14 @@ new class extends Component {
             ->pluck('total_points', 'user_id');
 
         return ChallengeMember::where('challenge_id', $this->selectedChallengeId)
-            ->with('user')
+            ->with('user.equippedCharacter')
             ->get()
             ->map(fn ($member) => [
-                'user_id' => $member->user_id,
-                'name'    => $member->user->name ?? 'Unknown',
-                'points'  => (int) ($points[$member->user_id] ?? 0),
+                'user_id'         => $member->user_id,
+                'name'            => $member->user->name ?? 'Unknown',
+                'points'          => (int) ($points[$member->user_id] ?? 0),
+                'character_image' => $member->user->equippedCharacter?->image,
+                'character_tier'  => $member->user->equippedCharacter?->tier,
             ])
             ->sortByDesc('points')
             ->values()

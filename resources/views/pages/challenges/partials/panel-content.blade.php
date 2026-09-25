@@ -153,7 +153,13 @@
                 <div class="flex items-end justify-center gap-2 mb-6 lg:mb-4">
                     @if (isset($leaderboard[1]))
                         <div class="flex flex-col items-center">
-                            <div class="w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-zinc-700 flex items-center justify-center font-heading font-bold text-sm text-zinc-200">{{ strtoupper(mb_substr($leaderboard[1]['name'], 0, 1)) }}</div>
+                                <div class="relative w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden font-heading font-bold text-sm text-zinc-200 {{ ($leaderboard[1]['character_tier'] ?? null) === 'epic' ? 'ring-2 ring-purple-500/60' : '' }}">
+                                    @if ($leaderboard[1]['character_image'] ?? null)
+                                        <img src="{{ $leaderboard[1]['character_image'] }}" alt="" class="block w-full h-full object-cover object-center">
+                                    @else
+                                        {{ strtoupper(mb_substr($leaderboard[1]['name'], 0, 1)) }}
+                                    @endif
+                                </div>
                             <p class="text-[11px] lg:text-[10px] text-zinc-400 mt-1 max-w-[64px] lg:max-w-[56px] truncate text-center">{{ $leaderboard[1]['name'] }}</p>
                             <div class="w-16 h-12 lg:w-14 lg:h-10 bg-zinc-800 rounded-t-md flex items-center justify-center text-sm lg:text-xs font-bold text-zinc-300 mt-1.5 lg:mt-1">{{ $leaderboard[1]['points'] }}</div>
                         </div>
@@ -162,7 +168,13 @@
                     @if (isset($leaderboard[0]))
                         <div class="flex flex-col items-center">
                             <span class="text-xl lg:text-lg">🏆</span>
-                            <div class="w-12 h-12 lg:w-10 lg:h-10 rounded-full bg-amber-400 flex items-center justify-center font-heading font-bold text-base lg:text-sm text-zinc-900">{{ strtoupper(mb_substr($leaderboard[0]['name'], 0, 1)) }}</div>
+                            <div class="relative w-12 h-12 lg:w-10 lg:h-10 rounded-full bg-amber-400 flex items-center justify-center overflow-hidden font-heading font-bold text-base lg:text-sm text-zinc-900 {{ ($leaderboard[0]['character_tier'] ?? null) === 'epic' ? 'ring-2 ring-purple-500/60' : '' }}">
+                                @if ($leaderboard[0]['character_image'] ?? null)
+                                    <img src="{{ $leaderboard[0]['character_image'] }}" alt="" class="block w-full h-full object-cover object-center">
+                                @else
+                                    {{ strtoupper(mb_substr($leaderboard[0]['name'], 0, 1)) }}
+                                @endif
+                            </div>
                             <p class="text-[11px] lg:text-[10px] text-zinc-200 mt-1 max-w-[64px] lg:max-w-[56px] truncate text-center font-medium">{{ $leaderboard[0]['name'] }}</p>
                             <div class="w-16 h-16 lg:w-14 lg:h-14 bg-amber-500/20 rounded-t-md flex items-center justify-center text-base lg:text-sm font-bold text-amber-400 mt-1.5 lg:mt-1">{{ $leaderboard[0]['points'] }}</div>
                         </div>
@@ -170,7 +182,13 @@
 
                     @if (isset($leaderboard[2]))
                         <div class="flex flex-col items-center">
-                            <div class="w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-zinc-700 flex items-center justify-center font-heading font-bold text-sm text-zinc-200">{{ strtoupper(mb_substr($leaderboard[2]['name'], 0, 1)) }}</div>
+                                <div class="relative w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden font-heading font-bold text-sm text-zinc-200 {{ ($leaderboard[2]['character_tier'] ?? null) === 'epic' ? 'ring-2 ring-purple-500/60' : '' }}">
+                                    @if ($leaderboard[2]['character_image'] ?? null)
+                                        <img src="{{ $leaderboard[2]['character_image'] }}" alt="" class="block w-full h-full object-cover object-center">
+                                    @else
+                                        {{ strtoupper(mb_substr($leaderboard[2]['name'], 0, 1)) }}
+                                    @endif
+                                </div>
                             <p class="text-[11px] lg:text-[10px] text-zinc-400 mt-1 max-w-[64px] lg:max-w-[56px] truncate text-center">{{ $leaderboard[2]['name'] }}</p>
                             <div class="w-16 h-10 lg:w-14 lg:h-8 bg-zinc-800 rounded-t-md flex items-center justify-center text-sm lg:text-xs font-bold text-zinc-300 mt-1.5 lg:mt-1">{{ $leaderboard[2]['points'] }}</div>
                         </div>
@@ -182,11 +200,18 @@
                         <div wire:key="lb-{{ $entry['user_id'] }}"
                              class="flex items-center justify-between px-3 py-2.5 lg:px-2 lg:py-1.5 rounded-lg text-base lg:text-sm
                                     {{ $entry['user_id'] === auth()->id() ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-300' }}">
-                            <span class="flex items-center gap-3 lg:gap-2">
-                                <span class="w-5 lg:w-4 text-xs text-zinc-500">{{ $i + 1 }}</span>
-                                {{ $entry['name'] }}
+                            <span class="flex items-center gap-3 lg:gap-2 min-w-0">
+                                <span class="w-5 lg:w-4 text-xs text-zinc-500 shrink-0">{{ $i + 1 }}</span>
+                                <span class="relative w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden text-[10px] font-bold shrink-0 {{ $entry['character_tier'] === 'epic' ? 'ring-1 ring-purple-500/60' : '' }}">
+                                    @if ($entry['character_image'])
+                                        <img src="{{ $entry['character_image'] }}" alt="" class="block w-full h-full object-cover object-center">
+                                    @else
+                                        {{ strtoupper(mb_substr($entry['name'], 0, 1)) }}
+                                    @endif
+                                </span>
+                                <span class="truncate">{{ $entry['name'] }}</span>
                             </span>
-                            <span class="font-medium">{{ $entry['points'] }}</span>
+                            <span class="font-medium shrink-0">{{ $entry['points'] }}</span>
                         </div>
                     @endforeach
                 </div>

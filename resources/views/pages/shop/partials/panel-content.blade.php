@@ -5,7 +5,7 @@
         $equipped = Auth::user()->equipped_character_id === $c->id;
         $isEpic = $c->tier === 'epic';
     @endphp
-    <div class="p-5 lg:p-8 h-full flex flex-col">
+    <div class="p-5 lg:p-8 space-y-5 lg:space-y-6 pb-28 lg:pb-8">
         <div class="flex items-center justify-between mb-6">
             <h2 class="font-heading font-semibold text-zinc-100 text-lg">Character</h2>
             <button wire:click="$set('selectedCharacterId', null)" class="text-zinc-400 hover:text-zinc-200 transition bg-zinc-800 hover:bg-zinc-700 p-2 lg:p-1.5 rounded-md">
@@ -71,7 +71,7 @@
 
 @elseif ($this->selectedPackage())
     @php $pkg = $this->selectedPackage(); @endphp
-    <div class="p-5 lg:p-8 h-full flex flex-col">
+    <div class="p-5 lg:p-8 space-y-5 lg:space-y-6 pb-28 lg:pb-8">
         <div class="flex items-center justify-between mb-6">
             <h2 class="font-heading font-semibold text-zinc-100 text-lg">Coin Package</h2>
             <button wire:click="$set('selectedPackageKey', null)" class="text-zinc-400 hover:text-zinc-200 transition bg-zinc-800 hover:bg-zinc-700 p-2 lg:p-1.5 rounded-md">

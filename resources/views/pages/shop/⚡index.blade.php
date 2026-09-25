@@ -163,9 +163,16 @@ new class extends Component {
 
                             {{-- Avatar Karakter (Efek Grayscale jika belum punya) --}}
                             <div class="relative w-14 h-14 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-2 overflow-hidden
-                                        {{ $c->is_owned ? 'ring-2 ring-emerald-500/30' : ($c->tier === 'epic' ? 'ring-2 ring-purple-500/40' : '') }}">
+                                        {{ Auth::user()->equipped_character_id === $c->id ? 'ring-2 ring-emerald-400' : ($c->is_owned ? 'ring-2 ring-emerald-500/30' : ($c->tier === 'epic' ? 'ring-2 ring-purple-500/40' : '')) }}">
                                 <img src="{{ $c->image }}" alt="{{ $c->name }}" 
                                      class="block w-full h-full object-cover object-center transition {{ ! $c->is_owned ? 'grayscale opacity-60' : '' }}">
+                                @if (Auth::user()->equipped_character_id === $c->id)
+                                    <div class="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center border-2 border-zinc-900">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3.5" stroke="currentColor" class="w-2.5 h-2.5 text-zinc-950">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </div>
+                                @endif
                             </div>
 
                             <p class="text-xs font-medium text-zinc-100 mb-0.5">{{ $c->name }}</p>

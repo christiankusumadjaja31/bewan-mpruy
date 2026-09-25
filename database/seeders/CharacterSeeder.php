@@ -13,12 +13,13 @@ class CharacterSeeder extends Seeder
             'name'                 => 'My-th',
             'image'                => '/images/characters/myth.png',
             'tier'                 => 'basic',
+            'is_default'           => true,
             'description'          => 'A resourceful little mouse who quietly squirrels away a bonus stash whenever a challenge wraps up.',
             'ability_type'         => 'challenge_completion_bonus',
             'ability_name'         => 'Challenge Harvest',
             'ability_description'  => '+5 bonus coins whenever you complete a challenge.',
             'ability_value'        => 5,
-            'price_coins'          => 150,
+            'price_coins'          => 0,
         ]);
 
         Character::updateOrCreate(['key' => 'mutn'], [

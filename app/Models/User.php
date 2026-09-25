@@ -68,6 +68,18 @@ class User extends Authenticatable
                     ->withPivot('joined_at', 'habit_id');
     }
 
+    protected static function booted(): void
+    {
+        static::created(function (User $user) {
+            $rookie = \App\Models\Character::where('is_default', true)->first();
+
+            if ($rookie) {
+                $user->characters()->attach($rookie->id, ['unlocked_at' => now()]);
+                $user->update(['equipped_character_id' => $rookie->id]);
+            }
+        });
+    }
+
     public function characters(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Character::class, 'user_characters')->withPivot('unlocked_at');

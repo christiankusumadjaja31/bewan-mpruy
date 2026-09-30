@@ -147,7 +147,7 @@ new class extends Component {
         unset($this->habits, $this->selectedHabit);
     }
 
-    private function syncChallengePoints(Habit $habit, HabitLog $log): void
+        private function syncChallengePoints(Habit $habit, HabitLog $log): void
     {
         $memberships = ChallengeMember::where('user_id', Auth::id())
             ->where('habit_id', $habit->id)
@@ -160,23 +160,28 @@ new class extends Component {
                 continue;
             }
 
+            $existing = ChallengeLog::where('challenge_id', $challenge->id)
+                ->where('user_id', Auth::id())
+                ->whereDate('date', $log->date->toDateString())
+                ->first();
+
             if ($log->completed) {
-                ChallengeLog::updateOrCreate(
-                    [
-                        'challenge_id' => $challenge->id,
-                        'user_id'      => Auth::id(),
-                        'date'         => $log->date->toDateString(),
-                    ],
-                    [
+                if ($existing) {
+                    $existing->update([
                         'habit_log_id' => $log->id,
                         'points'       => $challenge->points_per_completion,
-                    ]
-                );
-            } else {
-                ChallengeLog::where('challenge_id', $challenge->id)
-                    ->where('user_id', Auth::id())
-                    ->where('date', $log->date->toDateString())
-                    ->delete();
+                    ]);
+                } else {
+                    ChallengeLog::create([
+                        'challenge_id' => $challenge->id,
+                        'user_id'      => Auth::id(),
+                        'habit_log_id' => $log->id,
+                        'points'       => $challenge->points_per_completion,
+                        'date'         => $log->date->toDateString(),
+                    ]);
+                }
+            } elseif ($existing) {
+                $existing->delete();
             }
         }
     }

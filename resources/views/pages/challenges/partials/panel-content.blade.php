@@ -273,25 +273,35 @@
             </div>
         @endif
 
-        @if ($isMember && $challenge->status !== 'completed')
-            <div class="pt-4 lg:pt-2">
-                <button wire:click="confirmLeave"
+        @if ($challenge->status === 'completed')
+            @if ($isMember)
+                <div class="pt-4 lg:pt-2">
+                    <p class="text-center text-xs text-zinc-500">You took part in this challenge.</p>
+                </div>
+            @else
+                <div class="border-t border-zinc-800/50 pt-5 lg:pt-4">
+                    <p class="text-center text-sm text-zinc-500">This challenge has ended — joining is closed.</p>
+                </div>
+            @endif
+            @elseif ($isMember)
+                <div class="pt-4 lg:pt-2">
+                    <button wire:click="confirmLeave"
                         class="w-full py-3.5 lg:py-2 text-base lg:text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition border border-red-500/20">
-                    Leave Challenge
-                </button>
-            </div>
-        @else
-            <div class="border-t border-zinc-800/50 pt-5 lg:pt-4 space-y-4 lg:space-y-3">
-                <p class="font-heading text-base lg:text-sm font-semibold text-zinc-200">Join this challenge</p>
-                <p class="text-sm text-zinc-400 leading-relaxed">
-                    Joining adds <span class="text-zinc-200 font-medium">"{{ $challenge->habit_name }}"</span> to your Habits — check in daily to earn points here.
-                </p>
-                <button wire:click="join"
+                        Leave Challenge
+                    </button>
+                </div>
+            @else
+                <div class="border-t border-zinc-800/50 pt-5 lg:pt-4 space-y-4 lg:space-y-3">
+                    <p class="font-heading text-base lg:text-sm font-semibold text-zinc-200">Join this challenge</p>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Joining adds <span class="text-zinc-200 font-medium">"{{ $challenge->habit_name }}"</span> to your Habits — check in daily to earn points here.
+                    </p>
+                    <button wire:click="join"
                         class="w-full py-3.5 lg:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg transition text-base lg:text-sm mt-2">
-                    Join Challenge
-                </button>
-            </div>
-        @endif
+                        Join Challenge
+                    </button>
+                </div>
+            @endif
     </div>
 @else
     <div class="flex h-full items-center justify-center p-8 text-center text-zinc-600 text-sm">

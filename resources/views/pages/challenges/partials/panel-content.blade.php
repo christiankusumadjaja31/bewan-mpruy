@@ -84,6 +84,12 @@
                         {{ $challenge->start_date?->format('d M') }} &ndash; {{ $challenge->end_date?->format('d M Y') }}
                     </p>
 
+                    @if ($challenge->status === 'completed')
+                        <span class="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-zinc-700/50 text-zinc-300 border border-zinc-600/50">
+                            Ended
+                        </span>
+                    @endif
+
                     {{-- Indikator visibility — selalu tampil buat siapa aja, cuma label, nggak bisa diklik --}}
                     <span class="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase border
                                 {{ $challenge->visibility === 'private'
@@ -100,7 +106,7 @@
                 </div>
 
                 {{-- Aksi ubah visibility — cuma buat creator --}}
-                @if ($this->isCreator)
+                @if ($this->isCreator && $challenge->status !== 'completed')
                     <button wire:click="toggleVisibility"
                             class="text-[11px] text-zinc-500 hover:text-zinc-300 underline underline-offset-2 mt-2 transition">
                         Change to {{ $challenge->visibility === 'public' ? 'Private' : 'Public' }}
@@ -146,6 +152,15 @@
         @endif
 
         {{-- Podium + Leaderboard --}}
+        @if ($challenge->settled_at)
+            <div class="bg-zinc-800/40 border border-zinc-700/50 rounded-lg px-3 py-2 text-xs text-zinc-400 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-emerald-400 shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Results finalized — character bonuses have been awarded.
+            </div>
+        @endif
+        
         @if (count($leaderboard))
             <div class="border-t border-zinc-800/50 pt-6 lg:pt-5">
                 <p class="font-heading text-base lg:text-sm font-semibold text-zinc-200 mb-6 lg:mb-5">Leaderboard</p>
@@ -258,7 +273,7 @@
             </div>
         @endif
 
-        @if ($isMember)
+        @if ($isMember && $challenge->status !== 'completed')
             <div class="pt-4 lg:pt-2">
                 <button wire:click="confirmLeave"
                         class="w-full py-3.5 lg:py-2 text-base lg:text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition border border-red-500/20">

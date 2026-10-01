@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Flux\Flux;
+use App\Services\AbilityEngine;
 
 new class extends Component {
     public string $activeTab = 'my'; // 'my' | 'discover'
@@ -70,7 +71,50 @@ new class extends Component {
             return null;
         }
 
-        return Challenge::withCount('members')->find($this->selectedChallengeId);
+        $challenge = Challenge::withCount('members')->find($this->selectedChallengeId);
+
+        if ($challenge) {
+            $this->settleChallengeIfNeeded($challenge);
+        }
+
+        return $challenge;
+    }
+
+    private function settleChallengeIfNeeded(Challenge $challenge): void
+    {
+        if ($challenge->settled_at || today()->lt($challenge->end_date)) {
+            return;
+        }
+
+        $completedDaysByUser = ChallengeLog::where('challenge_id', $challenge->id)
+            ->selectRaw('user_id, COUNT(*) as days')
+            ->groupBy('user_id')
+            ->pluck('days', 'user_id');
+
+        $rankedUserIds = ChallengeLog::where('challenge_id', $challenge->id)
+            ->selectRaw('user_id, SUM(points) as total_points')
+            ->groupBy('user_id')
+            ->orderByDesc('total_points')
+            ->pluck('user_id')
+            ->values();
+
+        $members = ChallengeMember::where('challenge_id', $challenge->id)->with('user')->get();
+
+        foreach ($members as $member) {
+            if (! $member->user) {
+                continue;
+            }
+
+            $days = (int) ($completedDaysByUser[$member->user_id] ?? 0);
+            AbilityEngine::onChallengeCompletion($member->user, $challenge->name, $days);
+
+            $rankIndex = $rankedUserIds->search($member->user_id);
+            if ($rankIndex !== false) {
+                AbilityEngine::onPodiumFinish($member->user, $challenge->name, $rankIndex + 1);
+            }
+        }
+
+        $challenge->update(['settled_at' => now(), 'status' => 'completed']);
     }
 
     #[Computed]

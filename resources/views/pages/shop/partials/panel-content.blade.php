@@ -38,10 +38,25 @@
                 <p class="text-sm text-zinc-300 leading-relaxed">{{ $c->ability_description }}</p>
             </div>
 
-            @if ($owned)
-                <p class="text-xs text-zinc-600 mt-4 text-center">Unlocked</p>
+                        @if ($owned)
+                <p class="text-xs text-zinc-600 mt-4 text-center mb-4">Unlocked</p>
             @else
-                <p class="text-xs text-zinc-600 mt-4 text-center">🪙 {{ $c->price_coins }} to unlock</p>
+                <p class="text-xs text-zinc-600 mt-4 text-center mb-4">🪙 {{ $c->price_coins }} to unlock</p>
+            @endif
+
+            @if ($equipped)
+                @php $recentLogs = \App\Models\AbilityLog::where('user_id', Auth::id())->where('character_id', $c->id)->latest()->take(5)->get(); @endphp
+                <div class="border-t border-zinc-800/50 pt-4">
+                    <p class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-2">Recent Activity</p>
+                    @forelse ($recentLogs as $entry)
+                        <div class="flex items-center justify-between text-xs text-zinc-400 py-1.5 border-b border-zinc-800/30 last:border-0">
+                            <span class="truncate pr-2">{{ $entry->context }}</span>
+                            <span class="text-emerald-400 font-medium shrink-0">+{{ $entry->amount }} 🪙</span>
+                        </div>
+                    @empty
+                        <p class="text-xs text-zinc-600">No activity yet — check in a habit to see this character's ability in action.</p>
+                    @endforelse
+                </div>
             @endif
         </div>
 

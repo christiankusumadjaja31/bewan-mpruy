@@ -12,7 +12,7 @@ class Challenge extends Model
 {
     protected $fillable = [
         'creator_id', 'name', 'description', 'habit_name', 'type', 'start_date', 'end_date',
-        'target', 'points_per_completion', 'visibility', 'status',
+        'target', 'points_per_completion', 'visibility', 'status', 'settled_at',
     ];
 
     protected function casts(): array

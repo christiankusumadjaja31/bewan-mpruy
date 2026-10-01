@@ -12,6 +12,7 @@ use App\Models\Challenge;
 use App\Models\ChallengeLog;
 use App\Models\HabitStreakFreeze;
 use Flux\Flux;
+use App\Services\AbilityEngine;
 
 new class extends Component {
     public bool $showForm = false;
@@ -130,14 +131,7 @@ new class extends Component {
         }
 
         if ($log->completed && ! $log->coin_awarded_at) {
-            $coinsToAward = 2;
-
-            $character = Auth::user()->equippedCharacter;
-            if ($character && $character->ability_type === 'checkin_coin_bonus') {
-                $coinsToAward += $character->ability_value;
-            }
-
-            Auth::user()->increment('coins', $coinsToAward);
+            AbilityEngine::onCheckin(Auth::user(), $habit->name);
             $log->coin_awarded_at = now();
             $log->save();
         }
@@ -245,12 +239,7 @@ new class extends Component {
 
     public function freezesRemaining(Habit $habit): int
     {
-        $base = 3;
-
-        $character = Auth::user()->equippedCharacter;
-        if ($character && $character->ability_type === 'freeze_bonus') {
-            $base += (int) $character->ability_value;
-        }
+        $base = 3 + AbilityEngine::freezeBonusFor(Auth::user());
 
         return max(0, $base - $this->freezesUsedThisMonth($habit));
     }

@@ -1,20 +1,19 @@
 <?php
 
-use App\Models\Habit;
-use App\Models\HabitLog;
-use App\Models\ChallengeMember;
 use App\Models\Challenge;
 use App\Models\ChallengeLog;
+use App\Models\ChallengeMember;
+use App\Models\Habit;
+use App\Models\HabitLog;
 use App\Models\HabitStreakFreeze;
 use App\Services\AbilityEngine;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Flux\Flux;
 
 new #[Title('Dashboard')] class extends Component {
-    public ?int $selectedHabitId = null;
     public ?int $selectedChallengeId = null;
 
     public function greeting(): string
@@ -31,13 +30,6 @@ new #[Title('Dashboard')] class extends Component {
         return Auth::user()->equippedCharacter;
     }
 
-    public function todayHabits()
-    {
-        return Auth::user()->habits()
-            ->with(['logs' => fn ($q) => $q->whereDate('date', today())])
-            ->get();
-    }
-
     public function activeChallenges()
     {
         return ChallengeMember::where('user_id', Auth::id())
@@ -46,39 +38,24 @@ new #[Title('Dashboard')] class extends Component {
             ->get();
     }
 
-    public function isCompletedToday(Habit $habit): bool
+    #[Computed]
+    public function todaySummary(): array
     {
-        return (bool) ($habit->logs->first()?->completed ?? false);
+        $habits = Auth::user()->habits()
+            ->with(['logs' => fn ($q) => $q->whereDate('date', today())])
+            ->get();
+
+        $done = $habits->filter(fn ($h) => (bool) ($h->logs->first()?->completed ?? false))->count();
+
+        return ['done' => $done, 'total' => $habits->count()];
     }
 
-    public function toggleToday(int $habitId): void
+    #[Computed]
+    public function bestStreak(): int
     {
-        $habit = Auth::user()->habits()->findOrFail($habitId);
-        $date = today()->toDateString();
-
-        $log = HabitLog::where('habit_id', $habit->id)->whereDate('date', $date)->first();
-
-        if ($log) {
-            $log->completed = ! $log->completed;
-            $log->value = $log->completed ? $habit->target : 0;
-            $log->save();
-        } else {
-            $log = HabitLog::create([
-                'habit_id'  => $habit->id,
-                'date'      => $date,
-                'completed' => true,
-                'value'     => $habit->target,
-            ]);
-        }
-
-        if ($log->completed && ! $log->coin_awarded_at) {
-            $awarded = AbilityEngine::onCheckin(Auth::user(), $habit->name);
-            $log->coin_awarded_at = now();
-            $log->save();
-            Flux::toast(text: "+{$awarded} Coins earned!", variant: 'success');
-        }
-
-        $this->syncChallengePoints($habit, $log);
+        return Auth::user()->habits()->get()
+            ->map(fn ($h) => $this->habitStreak($h))
+            ->max() ?? 0;
     }
 
     #[Computed]
@@ -93,7 +70,7 @@ new #[Title('Dashboard')] class extends Component {
 
         $baseFreezeLimit = 3 + AbilityEngine::freezeBonusFor(Auth::user());
 
-        $totalFreezesRemaining = $habits->sum(function ($habit) use ($baseFreezeLimit) {
+        $freezesRemaining = $habits->sum(function ($habit) use ($baseFreezeLimit) {
             $used = HabitStreakFreeze::where('habit_id', $habit->id)
                 ->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
@@ -103,81 +80,94 @@ new #[Title('Dashboard')] class extends Component {
 
         return [
             'total_completions' => $totalCompletions,
-            'freezes_remaining' => $totalFreezesRemaining,
+            'freezes_remaining' => $freezesRemaining,
         ];
     }
 
     #[Computed]
     public function pointsChart(): array
     {
-        $days = collect(range(13, 0))->map(fn ($i) => today()->subDays($i)->toDateString());
+        $start = today()->subDays(13);
 
-        $raw = ChallengeLog::where('user_id', Auth::id())
-            ->whereBetween('date', [today()->subDays(13)->toDateString(), today()->toDateString()])
-            ->selectRaw('date, SUM(points) as total')
-            ->groupBy('date')
-            ->pluck('total', 'date');
+        // Ambil barisnya lalu kelompokkan lewat Carbon — jangan lewat string SQL,
+        // karena kolom date tersimpan dengan jam (00:00:00).
+        $byDay = ChallengeLog::where('user_id', Auth::id())
+            ->whereDate('date', '>=', $start->toDateString())
+            ->whereDate('date', '<=', today()->toDateString())
+            ->get(['date', 'points'])
+            ->groupBy(fn ($log) => $log->date->toDateString())
+            ->map(fn ($group) => (int) $group->sum('points'));
 
-        $values = $days->map(fn ($d) => (int) ($raw[$d] ?? 0))->toArray();
-
-        $width = 280;
-        $height = 60;
-        $padding = 6;
-        $max = max(1, max($values));
-        $count = count($values);
-        $stepX = $count > 1 ? ($width - $padding * 2) / ($count - 1) : 0;
-
-        $coords = [];
-        foreach ($values as $i => $v) {
-            $x = round($padding + $i * $stepX, 1);
-            $y = round($height - $padding - (($v / $max) * ($height - $padding * 2)), 1);
-            $coords[] = compact('x', 'y');
+        $values = [];
+        for ($i = 0; $i < 14; $i++) {
+            $values[] = (int) ($byDay[$start->copy()->addDays($i)->toDateString()] ?? 0);
         }
 
+        $max = max(1, max($values));
+        $coords = [];
+        foreach ($values as $i => $v) {
+            $coords[] = [
+                'x' => round(2 + $i * (96 / 13), 2),
+                'y' => round(92 - ($v / $max) * 84, 2),
+            ];
+        }
+
+        $line  = collect($coords)->map(fn ($c) => "{$c['x']},{$c['y']}")->implode(' ');
+        $first = $coords[0];
+        $last  = end($coords);
+
         return [
-            'polyline' => collect($coords)->map(fn ($c) => "{$c['x']},{$c['y']}")->implode(' '),
-            'last'     => end($coords),
-            'total'    => array_sum($values),
-            'has_data' => array_sum($values) > 0,
+            'polyline'    => $line,
+            'area'        => $line . " {$last['x']},100 {$first['x']},100",
+            'last'        => $last,
+            'total'       => array_sum($values),
+            'has_data'    => array_sum($values) > 0,
+            'start_label' => $start->format('d M'),
         ];
     }
 
-    private function syncChallengePoints(Habit $habit, HabitLog $log): void
+    #[Computed]
+    public function activityHeatmap(): array
     {
-        $logDate = $log->date instanceof \Carbon\Carbon ? $log->date->toDateString() : $log->date;
+        $habitIds = Auth::user()->habits()->pluck('id');
+        $total = max(1, $habitIds->count());
 
-        $memberships = ChallengeMember::where('user_id', Auth::id())
-            ->where('habit_id', $habit->id)
-            ->get();
+        $start = today()->startOfWeek(Carbon::MONDAY)->subWeeks(15); // 16 minggu, mulai Senin
 
-        foreach ($memberships as $membership) {
-            $challenge = Challenge::find($membership->challenge_id);
-            if (! $challenge || $challenge->status !== 'active') continue;
+        $counts = HabitLog::whereIn('habit_id', $habitIds)
+            ->where('completed', true)
+            ->whereDate('date', '>=', $start->toDateString())
+            ->get(['habit_id', 'date'])
+            ->groupBy(fn ($log) => $log->date->toDateString())
+            ->map(fn ($group) => $group->count());
 
-            $existing = ChallengeLog::where('challenge_id', $challenge->id)
-                ->where('user_id', Auth::id())
-                ->whereDate('date', $logDate)
-                ->first();
+        $cells = [];
+        $activeDays = 0;
 
-            if ($log->completed) {
-                if ($existing) {
-                    $existing->update([
-                        'habit_log_id' => $log->id,
-                        'points'       => $challenge->points_per_completion,
-                    ]);
-                } else {
-                    ChallengeLog::create([
-                        'challenge_id' => $challenge->id,
-                        'user_id'      => Auth::id(),
-                        'habit_log_id' => $log->id,
-                        'points'       => $challenge->points_per_completion,
-                        'date'         => $logDate,
-                    ]);
-                }
-            } elseif ($existing) {
-                $existing->delete();
+        for ($i = 0; $i < 112; $i++) {
+            $date = $start->copy()->addDays($i);
+
+            if ($date->gt(today())) {
+                $cells[] = ['future' => true];
+                continue;
             }
+
+            $done  = (int) ($counts[$date->toDateString()] ?? 0);
+            $ratio = $done / $total;
+            $level = $done === 0 ? 0 : ($ratio <= 0.34 ? 1 : ($ratio <= 0.67 ? 2 : ($ratio < 1 ? 3 : 4)));
+
+            if ($done > 0) $activeDays++;
+
+            $cells[] = [
+                'future'  => false,
+                'date'    => $date->format('d M'),
+                'done'    => $done,
+                'level'   => $level,
+                'isToday' => $date->isToday(),
+            ];
         }
+
+        return ['cells' => $cells, 'active_days' => $activeDays];
     }
 
     public function habitStreak(Habit $habit): int
@@ -187,38 +177,17 @@ new #[Title('Dashboard')] class extends Component {
         $counted = array_unique(array_merge($completedDates, $frozenDates));
 
         $cursor = today();
-        if (! in_array($cursor->toDateString(), $counted)) $cursor = $cursor->subDay();
+        if (! in_array($cursor->toDateString(), $counted)) {
+            $cursor = $cursor->subDay();
+        }
 
         $streak = 0;
         while (in_array($cursor->toDateString(), $counted)) {
             $streak++;
             $cursor = $cursor->subDay();
         }
+
         return $streak;
-    }
-
-    public function habitTotalCompletions(Habit $habit): int
-    {
-        return $habit->logs()->where('completed', true)->count();
-    }
-
-    public function habitHeatmap(Habit $habit): array
-    {
-        $start = today()->subDays(69)->toDateString();
-
-        $completed = HabitLog::where('habit_id', $habit->id)->where('completed', true)
-            ->whereDate('date', '>=', $start)->pluck('date')->map(fn ($d) => $d->toDateString())->toArray();
-
-        $frozen = HabitStreakFreeze::where('habit_id', $habit->id)
-            ->whereDate('date', '>=', $start)->pluck('date')->map(fn ($d) => $d->toDateString())->toArray();
-
-        return collect(range(69, 0))->map(function ($i) use ($completed, $frozen) {
-            $date = today()->subDays($i)->toDateString();
-            return [
-                'completed' => in_array($date, $completed),
-                'frozen'    => in_array($date, $frozen),
-            ];
-        })->toArray();
     }
 
     public function challengeStats(Challenge $challenge): array
@@ -240,21 +209,13 @@ new #[Title('Dashboard')] class extends Component {
         ];
     }
 
-    public function selectHabit(int $id): void
-    {
-        $this->selectedChallengeId = null;
-        $this->selectedHabitId = $this->selectedHabitId === $id ? null : $id;
-    }
-
     public function selectChallenge(int $id): void
     {
-        $this->selectedHabitId = null;
         $this->selectedChallengeId = $this->selectedChallengeId === $id ? null : $id;
     }
 
     public function closePanel(): void
     {
-        $this->selectedHabitId = null;
         $this->selectedChallengeId = null;
     }
 };
@@ -263,10 +224,12 @@ new #[Title('Dashboard')] class extends Component {
 
 <div class="fixed top-0 bottom-0 right-0 left-0 lg:left-16 z-40 flex overflow-hidden">
 
+    {{-- ============================== --}}
     {{-- SISI KIRI (2/3) --}}
+    {{-- ============================== --}}
     <div class="w-full lg:w-2/3 h-full overflow-y-auto bg-zinc-950 px-4 py-6 lg:px-8 lg:py-8">
 
-        {{-- Header — samain pola judul kayak Habit/Challenge/Shop --}}
+        {{-- Header --}}
         <div class="flex items-center justify-between mb-6 lg:mb-8">
             <div>
                 <h1 class="font-heading text-2xl font-bold text-zinc-100">Dashboard</h1>
@@ -291,68 +254,107 @@ new #[Title('Dashboard')] class extends Component {
             </div>
         </div>
 
-        {{-- Points Trend --}}
-        <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-5 mb-6 lg:mb-8">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Points — Last 14 Days</p>
-                <p class="text-sm font-heading font-bold text-emerald-400">{{ $this->pointsChart['total'] }} pts</p>
-            </div>
-            @if ($this->pointsChart['has_data'])
-                <svg viewBox="0 0 280 60" class="w-full h-14">
-                    <polyline points="{{ $this->pointsChart['polyline'] }}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                    <circle cx="{{ $this->pointsChart['last']['x'] }}" cy="{{ $this->pointsChart['last']['y'] }}" r="3.5" fill="#10b981" />
+        {{-- Stat cards --}}
+        @php $today = $this->todaySummary; @endphp
+        <div class="grid grid-cols-3 gap-3 mb-4 lg:mb-6">
+            <a href="/habits" wire:navigate class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-3 lg:p-4 text-center transition hover:bg-zinc-800/60">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 lg:w-6 lg:h-6 text-emerald-500 mx-auto mb-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-            @else
-                <p class="text-sm text-zinc-600 text-center py-4">No challenge points yet in the last 14 days.</p>
-            @endif
+                <p class="text-xl lg:text-2xl font-heading font-bold {{ $today['total'] > 0 && $today['done'] === $today['total'] ? 'text-emerald-400' : 'text-zinc-100' }}">{{ $today['done'] }}/{{ $today['total'] }}</p>
+                <p class="text-[10px] lg:text-xs text-zinc-500 mt-0.5">Done today</p>
+            </a>
+
+            <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-3 lg:p-4 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 mx-auto mb-1" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M12 12c2 -2.96 0 -7 -1 -8c0 3.038 -1.773 4.741 -3 6c-1.226 1.26 -2 3.24 -2 5a6 6 0 1 0 12 0c0 -1.532 -1.056 -3.94 -2 -5c-1.786 3 -2.791 3 -4 2z"></path>
+                </svg>
+                <p class="text-xl lg:text-2xl font-heading font-bold text-zinc-100">{{ $this->bestStreak }}</p>
+                <p class="text-[10px] lg:text-xs text-zinc-500 mt-0.5">Best streak</p>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-3 lg:p-4 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 lg:w-6 lg:h-6 text-blue-500 mx-auto mb-1" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11"></path>
+                </svg>
+                <p class="text-xl lg:text-2xl font-heading font-bold text-zinc-100">{{ $this->stats['total_completions'] }}</p>
+                <p class="text-[10px] lg:text-xs text-zinc-500 mt-0.5">Check-ins</p>
+            </div>
         </div>
 
-        {{-- Today's Focus --}}
-        <div class="mb-6 lg:mb-8">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="font-heading text-lg font-bold text-zinc-100">Today's Focus</h2>
-                <p class="text-xs text-zinc-500 font-medium">{{ today()->format('l, d M') }}</p>
+        {{-- Charts --}}
+        @php
+            $pc = $this->pointsChart;
+            $hm = $this->activityHeatmap;
+            $levels = ['bg-zinc-800', 'bg-emerald-900', 'bg-emerald-700', 'bg-emerald-500', 'bg-emerald-400'];
+        @endphp
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 lg:mb-8">
+
+            {{-- Points trend --}}
+            <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-5 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Points — 14 days</p>
+                    <p class="text-sm font-heading font-bold text-emerald-400">{{ $pc['total'] }} pts</p>
+                </div>
+
+                @if ($pc['has_data'])
+                    <div class="relative flex-1 min-h-20">
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="absolute inset-0 w-full h-full overflow-visible">
+                            <polygon points="{{ $pc['area'] }}" fill="rgba(16,185,129,0.12)" />
+                            <polyline points="{{ $pc['polyline'] }}" fill="none" stroke="#10b981" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="absolute w-2.5 h-2.5 rounded-full bg-emerald-400 -translate-x-1/2 -translate-y-1/2"
+                              style="left: {{ $pc['last']['x'] }}%; top: {{ $pc['last']['y'] }}%"></span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-zinc-600 mt-2">
+                        <span>{{ $pc['start_label'] }}</span>
+                        <span>Today</span>
+                    </div>
+                @else
+                    <div class="flex-1 min-h-20 flex items-center justify-center">
+                        <p class="text-sm text-zinc-600 text-center">Check in a habit linked to a challenge to see your trend here.</p>
+                    </div>
+                @endif
             </div>
 
-            <div class="space-y-2">
-                @forelse ($this->todayHabits() as $habit)
-                    @php $done = $this->isCompletedToday($habit); @endphp
-                    <div wire:key="focus-{{ $habit->id }}"
-                         class="flex items-center bg-zinc-900 rounded-xl py-3 px-3 transition group
-                                {{ $selectedHabitId === $habit->id ? 'bg-zinc-800/80 ring-1 ring-emerald-500/50' : 'hover:bg-zinc-800/60' }}">
+            {{-- Consistency heatmap --}}
+            <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Consistency — 16 weeks</p>
+                    <p class="text-[11px] text-zinc-500">{{ $hm['active_days'] }} active days</p>
+                </div>
 
-                        <button wire:click="toggleToday({{ $habit->id }})"
-                                class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all mr-3
-                                       {{ $done ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-zinc-700/60 hover:bg-zinc-600' }}">
-                            @if ($done)
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                </svg>
-                            @endif
-                        </button>
+                <div class="grid grid-flow-col grid-rows-7 gap-[3px]" style="grid-template-columns: repeat(16, minmax(0, 1fr));">
+                    @foreach ($hm['cells'] as $cell)
+                        @if ($cell['future'])
+                            <div wire:key="hm-{{ $loop->index }}" class="aspect-square"></div>
+                        @else
+                            <div wire:key="hm-{{ $loop->index }}"
+                                 title="{{ $cell['date'] }} — {{ $cell['done'] }} done"
+                                 class="aspect-square rounded-sm {{ $levels[$cell['level']] }} {{ $cell['isToday'] ? 'ring-1 ring-emerald-300' : '' }}"></div>
+                        @endif
+                    @endforeach
+                </div>
 
-                        <button wire:click="selectHabit({{ $habit->id }})" class="flex-1 text-left min-w-0">
-                            <p class="font-heading font-medium text-[15px] truncate {{ $done ? 'text-zinc-500' : 'text-zinc-100 group-hover:text-emerald-400 transition' }}">
-                                {{ $habit->name }}
-                            </p>
-                            <p class="text-[11px] text-zinc-500 mt-0.5 truncate">{{ rtrim(rtrim($habit->target, '0'), '.') }} {{ $habit->unit }} {{ $habit->category ? '• ' . $habit->category : '' }}</p>
-                        </button>
-                    </div>
-                @empty
-                    <div class="border border-dashed border-zinc-800 rounded-xl p-8 text-center text-zinc-500">
-                        <p class="text-sm">No habits yet — head to Habits to add one.</p>
-                    </div>
-                @endforelse
+                <div class="flex items-center justify-end gap-1 mt-3 text-[10px] text-zinc-600">
+                    <span>Less</span>
+                    @foreach ($levels as $l)
+                        <span class="w-2.5 h-2.5 rounded-sm {{ $l }}"></span>
+                    @endforeach
+                    <span>More</span>
+                </div>
             </div>
         </div>
 
         {{-- Active Challenges --}}
-        <div class="pb-32 lg:pb-20">
+        <div class="mb-6 lg:mb-0 lg:pb-20">
             <h2 class="font-heading text-lg font-bold text-zinc-100 mb-4">Active Challenges</h2>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($this->activeChallenges() as $member)
-                    @php $challenge = $member->challenge; @endphp
+                    @php $challenge = $member->challenge; $cs = $this->challengeStats($challenge); @endphp
                     <button wire:key="challenge-{{ $challenge->id }}"
                             wire:click="selectChallenge({{ $challenge->id }})"
                             class="text-left bg-zinc-900 rounded-xl py-4 px-4 transition
@@ -365,8 +367,9 @@ new #[Title('Dashboard')] class extends Component {
                             <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[9px] font-semibold rounded-full uppercase tracking-wider border border-emerald-500/20">Active</span>
                         </div>
                         <p class="font-heading font-medium text-zinc-100 truncate mb-1">{{ $challenge->name }}</p>
-                        <p class="text-xs text-zinc-500">
-                            {{ $challenge->points_per_completion }} pts/check-in &middot; Ends {{ $challenge->end_date->format('d M') }}
+                        <p class="text-xs text-zinc-500">{{ $challenge->points_per_completion }} pts/check-in &middot; Ends {{ $challenge->end_date->format('d M') }}</p>
+                        <p class="text-xs mt-2 font-medium {{ $cs['my_rank'] ? 'text-emerald-400' : 'text-zinc-600' }}">
+                            {{ $cs['my_rank'] ? "Rank #{$cs['my_rank']} · {$cs['my_points']} pts" : 'Not ranked yet' }}
                         </p>
                     </button>
                 @empty
@@ -376,16 +379,23 @@ new #[Title('Dashboard')] class extends Component {
                 @endforelse
             </div>
         </div>
+
+        {{-- Overview: inline di mobile saja (di desktop sudah jadi panel kanan) --}}
+        <div class="lg:hidden pb-32">
+            @include('pages.dashboard.partials.overview', ['inline' => true])
+        </div>
     </div>
 
+    {{-- ============================== --}}
     {{-- SISI KANAN (1/3) --}}
+    {{-- ============================== --}}
     <div class="hidden lg:flex lg:w-1/3 h-full overflow-y-auto bg-zinc-900 border-l border-zinc-800/80 shadow-xl">
         <div class="w-full">
             @include('pages.dashboard.partials.panel-content')
         </div>
     </div>
 
-    @if ($selectedHabitId || $selectedChallengeId)
+    @if ($selectedChallengeId)
         <div class="lg:hidden fixed inset-0 z-50 bg-zinc-900 overflow-y-auto">
             @include('pages.dashboard.partials.panel-content')
         </div>

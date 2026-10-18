@@ -4,9 +4,6 @@ use App\Concerns\PasswordValidationRules;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
-use Laravel\Fortify\Features;
-use Laravel\Fortify\Fortify;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -17,19 +14,6 @@ new #[Title('Security settings')] class extends Component {
     public string $password = '';
     public string $password_confirmation = '';
 
-
-
-    /**
-     * Mount the component.
-     */
-    public function mount(DisableTwoFactorAuthentication $disableTwoFactorAuthentication): void
-    {
-
-    }
-
-    /**
-     * Update the password for the currently authenticated user.
-     */
     public function updatePassword(): void
     {
         try {
@@ -51,52 +35,38 @@ new #[Title('Security settings')] class extends Component {
 
         Flux::toast(variant: 'success', text: __('Password updated.'));
     }
-
-
 }; ?>
 
 <section class="w-full">
-    @include('partials.settings-heading')
+    <x-pages::settings.layout active="security" heading="Password" subheading="Use a long, random password to keep your account safe">
+        <form wire:submit="updatePassword" class="space-y-5 pt-2">
+            @foreach ([
+                ['current_password', 'Current password', 'current-password'],
+                ['password', 'New password', 'new-password'],
+                ['password_confirmation', 'Confirm password', 'new-password'],
+            ] as [$field, $label, $autocomplete])
+                <div x-data="{ show: false }" wire:key="pw-{{ $field }}">
+                    <label class="block text-[11px] lg:text-xs uppercase tracking-wider mb-1.5 text-zinc-500 font-medium">{{ $label }}</label>
+                    <div class="relative">
+                        <input type="password" :type="show ? 'text' : 'password'" wire:model="{{ $field }}" required
+                               autocomplete="{{ $autocomplete }}"
+                               @if ($field !== 'current_password') passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}" @endif
+                               class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 pl-0 pr-12 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition">
+                        <button type="button" x-on:click="show = ! show"
+                                class="absolute right-0 top-1/2 -translate-y-1/2 text-[11px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition">
+                            <span x-text="show ? 'Hide' : 'Show'">Show</span>
+                        </button>
+                    </div>
+                    @error($field) <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+            @endforeach
 
-    <flux:heading level="2" class="sr-only">{{ __('Security settings') }}</flux:heading>
-
-    <x-pages::settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
-        <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
-            <flux:input
-                wire:model="current_password"
-                :label="__('Current password')"
-                type="password"
-                required
-                autocomplete="current-password"
-                viewable
-            />
-            <flux:input
-                wire:model="password"
-                :label="__('New password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
-            />
-            <flux:input
-                wire:model="password_confirmation"
-                :label="__('Confirm password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
-            />
-
-            <div class="flex items-center gap-4">
-                <flux:button variant="primary" type="submit" data-test="update-password-button">
-                    {{ __('Save') }}
-                </flux:button>
+            <div class="pt-2">
+                <button type="submit" data-test="update-password-button"
+                        class="w-full py-3.5 lg:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg transition text-base lg:text-sm">
+                    Save
+                </button>
             </div>
         </form>
-
-
     </x-pages::settings.layout>
-
 </section>

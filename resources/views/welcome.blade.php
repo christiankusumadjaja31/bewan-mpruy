@@ -103,7 +103,7 @@
             <section class="relative overflow-hidden" aria-labelledby="hero-title">
                 <div class="pointer-events-none absolute inset-x-0 -top-40 mx-auto h-[520px] max-w-4xl bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.16),transparent_65%)]" aria-hidden="true"></div>
 
-                <div class="relative mx-auto grid w-full max-w-6xl items-center gap-16 px-6 pb-20 pt-16 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:px-8 lg:pb-28 lg:pt-24">
+                <div class="relative mx-auto grid w-full max-w-6xl items-start gap-16 px-6 pb-20 pt-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-16">
                     <div class="rise">
                         <p class="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 py-1.5 pl-1.5 pr-3 text-xs text-zinc-400">
                             <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-400">New</span>
@@ -239,8 +239,8 @@
             {{-- ===================== --}}
             {{-- How it works --}}
             {{-- ===================== --}}
-            <section id="how" class="scroll-mt-24 border-b border-zinc-800/60" aria-labelledby="how-title">
-                <div class="mx-auto w-full max-w-6xl px-6 py-20 lg:px-8 lg:py-28">
+            <section id="how" class="scroll-mt-[4.5rem] border-b border-zinc-800/60" aria-labelledby="how-title">
+                <div class="mx-auto w-full max-w-6xl px-6 py-16 lg:px-8 lg:py-24">
                     <div class="max-w-2xl">
                         <p class="text-xs font-medium uppercase tracking-[0.18em] text-emerald-400">How it works</p>
                         <h2 id="how-title" class="mt-3 font-heading text-3xl font-semibold tracking-tight text-balance text-zinc-50 sm:text-4xl">
@@ -251,7 +251,7 @@
                         </p>
                     </div>
 
-                    <ol class="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-8">
+                    <ol class="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8">
                         @php
                             $steps = [
                                 ['01', 'Name your habits', 'Daily or weekly, with a target you can actually hit. One or two is plenty to start.'],
@@ -274,8 +274,8 @@
             {{-- ===================== --}}
             {{-- Features --}}
             {{-- ===================== --}}
-            <section id="features" class="scroll-mt-24 border-b border-zinc-800/60" aria-labelledby="features-title">
-                <div class="mx-auto w-full max-w-6xl px-6 py-20 lg:px-8 lg:py-28">
+            <section id="features" class="scroll-mt-[4.5rem] border-b border-zinc-800/60" aria-labelledby="features-title">
+                <div class="mx-auto w-full max-w-6xl px-6 py-16 lg:px-8 lg:py-24">
                     <div class="max-w-2xl">
                         <p class="text-xs font-medium uppercase tracking-[0.18em] text-emerald-400">Features</p>
                         <h2 id="features-title" class="mt-3 font-heading text-3xl font-semibold tracking-tight text-balance text-zinc-50 sm:text-4xl">
@@ -283,7 +283,7 @@
                         </h2>
                     </div>
 
-                    <div class="mt-14 grid gap-4 lg:grid-cols-3">
+                    <div class="mt-12 grid gap-4 lg:grid-cols-3">
                         {{-- Consistency --}}
                         <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900 p-6 lg:col-span-2 lg:p-8">
                             <div class="flex items-start justify-between gap-4">
@@ -469,9 +469,9 @@
             {{-- ===================== --}}
             {{-- Together / CTA --}}
             {{-- ===================== --}}
-            <section id="together" class="scroll-mt-24" aria-labelledby="cta-title">
-                <div class="mx-auto w-full max-w-6xl px-6 py-20 lg:px-8 lg:py-28">
-                    <div class="relative overflow-hidden rounded-3xl border border-zinc-800/80 bg-zinc-900 px-6 py-16 text-center sm:px-14">
+            <section id="together" class="scroll-mt-[4.5rem]" aria-labelledby="cta-title">
+                <div class="mx-auto w-full max-w-6xl px-6 py-16 lg:px-8 lg:py-24">
+                    <div class="relative overflow-hidden rounded-3xl border border-zinc-800/80 bg-zinc-900 px-6 py-14 text-center sm:px-14">
                         <div class="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-64 max-w-xl bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.18),transparent_70%)]" aria-hidden="true"></div>
 
                         <div class="relative">

@@ -1,69 +1,76 @@
 <x-layouts::auth :title="__('Register')">
-    <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Create an account')" :description="__('Enter your details below to create your account')" />
+    <div class="flex flex-col gap-7">
+        <x-auth-header
+            :title="__('Create your account')"
+            :description="__('Start with one habit — and someone to keep you honest.')"
+        />
 
-        <!-- Session Status -->
-        <x-auth-session-status class="text-center" :status="session('status')" />
+        <x-auth-session-status :status="session('status')" />
 
-        <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-6">
+        <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-5">
             @csrf
-            <!-- Name -->
-            <flux:input
+
+            <x-auth-input
                 name="name"
                 :label="__('Name')"
-                :value="old('name')"
                 type="text"
+                :value="old('name')"
+                autocomplete="name"
+                :placeholder="__('Your name')"
                 required
                 autofocus
-                autocomplete="name"
-                :placeholder="__('Full name')"
             />
 
-            <!-- Email Address -->
-            <flux:input
+            <x-auth-input
                 name="email"
-                :label="__('Email address')"
-                :value="old('email')"
+                :label="__('Email')"
                 type="email"
-                required
+                :value="old('email')"
                 autocomplete="email"
-                placeholder="email@example.com"
+                placeholder="you@example.com"
+                required
             />
 
-            <!-- Password -->
-            <flux:input
+            <x-auth-input
                 name="password"
                 :label="__('Password')"
                 type="password"
-                required
                 autocomplete="new-password"
-                :placeholder="__('Password')"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
+                :placeholder="__('Your password')"
+                :passwordrules="\Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString()"
+                :hint="__('Use at least 8 characters.')"
+                required
             />
 
-            <!-- Confirm Password -->
-            <flux:input
+            <x-auth-input
                 name="password_confirmation"
                 :label="__('Confirm password')"
                 type="password"
-                required
                 autocomplete="new-password"
-                :placeholder="__('Confirm password')"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
+                :placeholder="__('Repeat your password')"
+                :passwordrules="\Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString()"
+                required
             />
 
-            <div class="flex items-center justify-end">
-                <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
-                    {{ __('Create account') }}
-                </flux:button>
-            </div>
+            <button
+                type="submit"
+                data-test="register-user-button"
+                class="inline-flex h-12 w-full items-center justify-center rounded-xl bg-emerald-500 text-[15px] font-semibold text-zinc-950 transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+            >
+                {{ __('Create account') }}
+            </button>
         </form>
 
-        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
-            <span>{{ __('Already have an account?') }}</span>
-            <flux:link :href="route('login')" wire:navigate>{{ __('Log in') }}</flux:link>
+        <div class="border-t border-zinc-800/80 pt-6">
+            <p class="text-center text-sm text-zinc-500">
+                {{ __('Already have an account?') }}
+                <a
+                    href="{{ route('login') }}"
+                    class="font-medium text-emerald-400 transition hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+                >
+                    {{ __('Log in') }}
+                </a>
+            </p>
         </div>
     </div>
 </x-layouts::auth>

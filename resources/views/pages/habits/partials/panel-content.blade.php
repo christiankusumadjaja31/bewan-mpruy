@@ -179,7 +179,7 @@
 
         @if ($isLocked)
             <p class="text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
-                Locked — this habit follows the challenge creator's rules. Leave the challenge to unlock it.
+                Locked. This habit follows the challenge creator's rules. Leave the challenge to unlock it.
             </p>
         @endif
 

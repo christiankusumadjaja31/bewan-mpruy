@@ -34,7 +34,7 @@
             </div>
 
             <div class="rounded-xl p-4 border {{ $isEpic ? 'bg-purple-500/5 border-purple-500/20' : 'bg-zinc-800/40 border-zinc-700/50' }}">
-                <p class="text-[10px] uppercase tracking-wider {{ $isEpic ? 'text-purple-400' : 'text-emerald-400' }} font-medium mb-1">Ability — {{ $c->ability_name }}</p>
+                <p class="text-[10px] uppercase tracking-wider {{ $isEpic ? 'text-purple-400' : 'text-emerald-400' }} font-medium mb-1">Ability: {{ $c->ability_name }}</p>
                 <p class="text-sm text-zinc-300 leading-relaxed">{{ $c->ability_description }}</p>
             </div>
 
@@ -54,7 +54,7 @@
                             <span class="text-emerald-400 font-medium shrink-0">+{{ $entry->amount }} 🪙</span>
                         </div>
                     @empty
-                        <p class="text-xs text-zinc-600">No activity yet — check in a habit to see this character's ability in action.</p>
+                        <p class="text-xs text-zinc-600">No activity yet. Check in a habit to see this character's ability in action.</p>
                     @endforelse
                 </div>
             @endif
@@ -78,7 +78,7 @@
             @else
                 <button wire:click="buy({{ $c->id }})"
                         class="w-full py-3 font-bold rounded-lg transition {{ $isEpic ? 'bg-purple-500 hover:bg-purple-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950' }}">
-                    🪙 {{ $c->price_coins }} — Unlock
+                    Unlock for 🪙 {{ $c->price_coins }}
                 </button>
             @endif
         </div>

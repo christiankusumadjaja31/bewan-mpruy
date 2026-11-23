@@ -33,7 +33,7 @@ class AbilityEngine
     }
 
     /**
-     * Dipanggil dari Habits::freezesRemaining() — berapa extra freeze dari karakter.
+     * Dipanggil dari Habits::freezesRemaining(), berapa extra freeze dari karakter.
      */
     public static function freezeBonusFor(User $user): int
     {
@@ -47,7 +47,7 @@ class AbilityEngine
     }
 
     /**
-     * Belum ada trigger-nya di kode manapun — disiapin buat waktu kita
+     * Belum ada trigger-nya di kode manapun, disiapin buat waktu kita
      * bangun logic "settlement" pas challenge selesai (end_date lewat).
      */
     public static function onChallengeCompletion(User $user, string $challengeName, int $completedDays): int
@@ -66,7 +66,7 @@ class AbilityEngine
     }
 
     /**
-     * Belum ada trigger-nya di kode manapun — disiapin buat waktu kita
+     * Belum ada trigger-nya di kode manapun, disiapin buat waktu kita
      * bangun logic podium settlement pas challenge selesai.
      */
     public static function onPodiumFinish(User $user, string $challengeName, int $rank): int

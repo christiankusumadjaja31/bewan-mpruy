@@ -36,7 +36,7 @@
                     @if ($cStats['my_rank'])
                         Rank #{{ $cStats['my_rank'] }} &middot; {{ $cStats['my_points'] }} pts
                     @else
-                        Not ranked yet — check in to get on the board.
+                        Not ranked yet. Check in to get on the board.
                     @endif
                 </p>
             </div>

@@ -308,7 +308,7 @@ new class extends Component {
         $habit = Auth::user()->habits()->findOrFail($id);
 
         if ($this->challengeOwnerType($habit) === 'joined') {
-            Flux::toast(text: "Locked — this habit follows the challenge creator's rules. Leave the challenge to unlock it.", variant: 'danger');
+            Flux::toast(text: "Locked. This habit follows the challenge creator's rules. Leave the challenge to unlock it.", variant: 'danger');
             return;
         }
 
@@ -514,7 +514,7 @@ new class extends Component {
                                         <path d="M5 4h14a1 1 0 011 1v2a4 4 0 01-4 4h-.1A6.002 6.002 0 0113 15.917V18h2a1 1 0 011 1v1H8v-1a1 1 0 011-1h2v-2.083A6.002 6.002 0 018.1 11H8a4 4 0 01-4-4V5a1 1 0 011-1zm0 2v1a2 2 0 002 2 6.02 6.02 0 010-3H5zm14 0h-2a6.02 6.02 0 010 3 2 2 0 002-2V6z"/>
                                     </svg>
                                 @elseif ($challengeType === 'joined')
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 lg:w-3.5 lg:h-3.5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" title="Locked — follows the challenge creator's rules">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 lg:w-3.5 lg:h-3.5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" title="Locked, follows the challenge creator's rules">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                                     </svg>
                                 @endif

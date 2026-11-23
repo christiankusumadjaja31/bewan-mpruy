@@ -214,7 +214,7 @@ new class extends Component {
             'joined_at'    => now(),
         ]);
 
-        Flux::toast(text: "Challenge created — you're in!", variant: 'success');
+        Flux::toast(text: "Challenge created, you're in!", variant: 'success');
 
         $this->showCreateForm = false;
         $this->resetCreateForm();
@@ -408,7 +408,7 @@ new class extends Component {
                     @empty
                         <div class="border border-dashed border-zinc-800 rounded-xl p-12 text-center text-zinc-500 mt-6">
                             <p class="font-heading text-zinc-400 mb-1">No public challenges right now</p>
-                            <p class="text-sm">Be the first — click "Create" to start one, or use an invite code above.</p>
+                            <p class="text-sm">Be the first. Click "Create" to start one, or use an invite code above.</p>
                         </div>
                     @endforelse
                 @endif

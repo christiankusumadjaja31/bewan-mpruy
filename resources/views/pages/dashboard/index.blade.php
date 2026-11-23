@@ -89,7 +89,7 @@ new #[Title('Dashboard')] class extends Component {
     {
         $start = today()->subDays(13);
 
-        // Ambil barisnya lalu kelompokkan lewat Carbon — jangan lewat string SQL,
+        // Ambil barisnya lalu kelompokkan lewat Carbon, jangan lewat string SQL,
         // karena kolom date tersimpan dengan jam (00:00:00).
         $byDay = ChallengeLog::where('user_id', Auth::id())
             ->whereDate('date', '>=', $start->toDateString())
@@ -295,7 +295,7 @@ new #[Title('Dashboard')] class extends Component {
             {{-- Points trend --}}
             <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-5 flex flex-col">
                 <div class="flex items-center justify-between mb-3">
-                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Points — 14 days</p>
+                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Points, 14 days</p>
                     <p class="text-sm font-heading font-bold text-emerald-400">{{ $pc['total'] }} pts</p>
                 </div>
 
@@ -322,7 +322,7 @@ new #[Title('Dashboard')] class extends Component {
             {{-- Consistency heatmap --}}
             <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Consistency — 16 weeks</p>
+                    <p class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Consistency, 16 weeks</p>
                     <p class="text-[11px] text-zinc-500">{{ $hm['active_days'] }} active days</p>
                 </div>
 
@@ -332,7 +332,7 @@ new #[Title('Dashboard')] class extends Component {
                             <div wire:key="hm-{{ $loop->index }}" class="aspect-square"></div>
                         @else
                             <div wire:key="hm-{{ $loop->index }}"
-                                 title="{{ $cell['date'] }} — {{ $cell['done'] }} done"
+                                 title="{{ $cell['date'] }}, {{ $cell['done'] }} done"
                                  class="aspect-square rounded-sm {{ $levels[$cell['level']] }} {{ $cell['isToday'] ? 'ring-1 ring-emerald-300' : '' }}"></div>
                         @endif
                     @endforeach

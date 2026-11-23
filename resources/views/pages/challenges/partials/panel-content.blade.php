@@ -56,7 +56,7 @@
                 <input type="text" wire:model="habit_name" placeholder="e.g., Study 1 hour"
                        class="w-full border-b border-zinc-800 bg-transparent text-zinc-100 px-0 py-2 text-base lg:text-sm focus:ring-0 focus:border-emerald-500 outline-none transition placeholder:text-zinc-700">
                 @error('habit_name') <span class="text-xs text-red-400 mt-1 block">{{ $message }}</span> @enderror
-                <p class="text-xs text-zinc-500 mt-1.5">This becomes the habit every participant — including you — automatically gets added to their Habits.</p>
+                <p class="text-xs text-zinc-500 mt-1.5">This becomes the habit every participant, including you, automatically gets added to their Habits.</p>
             </div>
 
             <div class="pt-4 lg:pt-2">
@@ -90,7 +90,7 @@
                         </span>
                     @endif
 
-                    {{-- Indikator visibility — selalu tampil buat siapa aja, cuma label, nggak bisa diklik --}}
+                    {{-- Indikator visibility: selalu tampil buat siapa aja, cuma label, nggak bisa diklik --}}
                     <span class="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase border
                                 {{ $challenge->visibility === 'private'
                                     ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
@@ -105,7 +105,7 @@
                     </span>
                 </div>
 
-                {{-- Aksi ubah visibility — cuma buat creator --}}
+                {{-- Aksi ubah visibility: cuma buat creator --}}
                 @if ($this->isCreator && $challenge->status !== 'completed')
                     <button wire:click="toggleVisibility"
                             class="text-[11px] text-zinc-500 hover:text-zinc-300 underline underline-offset-2 mt-2 transition">
@@ -147,7 +147,7 @@
 
             <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 lg:p-3">
                 <p class="text-xs text-zinc-400 mb-0.5">Linked habit</p>
-                <p class="text-base lg:text-sm font-medium text-zinc-100">{{ $this->membership->habit?->name ?? '—' }}</p>
+                <p class="text-base lg:text-sm font-medium text-zinc-100">{{ $this->membership->habit?->name ?? '-' }}</p>
             </div>
         @endif
 
@@ -157,7 +157,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-emerald-400 shrink-0">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Results finalized — character bonuses have been awarded.
+                Results finalized. Character bonuses have been awarded.
             </div>
         @endif
         
@@ -280,7 +280,7 @@
                 </div>
             @else
                 <div class="border-t border-zinc-800/50 pt-5 lg:pt-4">
-                    <p class="text-center text-sm text-zinc-500">This challenge has ended — joining is closed.</p>
+                    <p class="text-center text-sm text-zinc-500">This challenge has ended, joining is closed.</p>
                 </div>
             @endif
             @elseif ($isMember)
@@ -294,7 +294,7 @@
                 <div class="border-t border-zinc-800/50 pt-5 lg:pt-4 space-y-4 lg:space-y-3">
                     <p class="font-heading text-base lg:text-sm font-semibold text-zinc-200">Join this challenge</p>
                     <p class="text-sm text-zinc-400 leading-relaxed">
-                        Joining adds <span class="text-zinc-200 font-medium">"{{ $challenge->habit_name }}"</span> to your Habits — check in daily to earn points here.
+                        Joining adds <span class="text-zinc-200 font-medium">"{{ $challenge->habit_name }}"</span> to your Habits. Check in daily to earn points here.
                     </p>
                     <button wire:click="join"
                         class="w-full py-3.5 lg:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg transition text-base lg:text-sm mt-2">

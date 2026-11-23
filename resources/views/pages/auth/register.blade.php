@@ -2,7 +2,7 @@
     <div class="flex flex-col gap-7">
         <x-auth-header
             :title="__('Create your account')"
-            :description="__('Start with one habit — and someone to keep you honest.')"
+            :description="__('Start with one habit, and someone to keep you honest.')"
         />
 
         <x-auth-session-status :status="session('status')" />

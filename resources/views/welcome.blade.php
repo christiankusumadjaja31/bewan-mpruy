@@ -4,7 +4,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        <title>Nudge — habits that stick, kept together</title>
+        <title>Nudge: habits that stick, kept together</title>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -122,7 +122,7 @@
                         <div class="mt-9 flex flex-col gap-3 sm:flex-row">
                             @if (Route::has('register'))
                                 <a href="{{ route('register') }}" class="inline-flex h-12 items-center justify-center rounded-xl bg-emerald-500 px-6 text-[15px] font-semibold text-zinc-950 transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
-                                    Start tracking — it's free
+                                    Start tracking, it's free
                                 </a>
                             @endif
 
@@ -290,7 +290,7 @@
                                 <div>
                                     <h3 class="font-heading text-lg font-semibold text-zinc-100">Momentum you can see</h3>
                                     <p class="mt-2 max-w-md text-[15px] leading-relaxed text-zinc-400">
-                                        Sixteen weeks of consistency at a glance. Not a score to chase — just an honest picture of how the year is going.
+                                        Sixteen weeks of consistency at a glance. Not a score to chase, just an honest picture of how the year is going.
                                     </p>
                                 </div>
                                 <span class="hidden shrink-0 items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] text-zinc-400 sm:inline-flex">
@@ -355,7 +355,7 @@
                             </span>
                             <h3 class="mt-5 font-heading text-lg font-semibold text-zinc-100">Streaks that bend</h3>
                             <p class="mt-2 text-[15px] leading-relaxed text-zinc-400">
-                                Life happens. Spend a freeze instead of starting from zero — three a month, already yours.
+                                Life happens. Spend a freeze instead of starting from zero. Three a month, already yours.
                             </p>
 
                             <div class="mt-auto pt-8" aria-hidden="true">
@@ -412,7 +412,7 @@
                                 <div>
                                     <h3 class="font-heading text-lg font-semibold text-zinc-100">Every habit keeps its own record</h3>
                                     <p class="mt-2 max-w-md text-[15px] leading-relaxed text-zinc-400">
-                                        A month view for each habit — completed, frozen, or still ahead of you. Tap a day to see what happened.
+                                        A month view for each habit: completed, frozen, or still ahead of you. Tap a day to see what happened.
                                     </p>
                                 </div>
 

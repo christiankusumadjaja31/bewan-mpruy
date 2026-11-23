@@ -18,7 +18,7 @@
                 <a
                     href="{{ route('home') }}"
                     class="inline-flex min-h-11 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-                    aria-label="{{ config('app.name') }} home"
+                    aria-label="Nudge home"
                 >
                     @if (file_exists(public_path('images/nudge-mark.png')))
                         <img src="{{ asset('images/nudge-mark.png') }}" alt="" class="h-6 w-auto" />
@@ -27,7 +27,7 @@
                             <span class="font-heading text-xs font-bold leading-none text-emerald-400">N</span>
                         </span>
                     @endif
-                    <span class="font-heading text-[17px] font-semibold tracking-tight text-zinc-50">{{ config('app.name') }}</span>
+                    <span class="font-heading text-[17px] font-semibold tracking-tight text-zinc-50">Nudge</span>
                 </a>
 
                 <a
@@ -49,8 +49,7 @@
             </main>
 
             <footer class="relative border-t border-zinc-800/60">
-                <div class="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-1 px-6 py-5 text-[13px] text-zinc-600 sm:flex-row">
-                    <span>&copy; {{ date('Y') }} {{ config('app.name') }}</span>
+                <div class="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-1 px-6 py-5 text-[13px] text-zinc-600 sm:flex-row sm:justify-end">
                     <span>Free while in beta</span>
                 </div>
             </footer>
@@ -61,6 +60,20 @@
                 <flux:toast />
             </flux:toast.group>
         @endpersist
+
+        @if ($errors->any())
+            <script>
+                document.addEventListener('alpine:initialized', function () {
+                    document.dispatchEvent(new CustomEvent('toast-show', {
+                        detail: {
+                            duration: 6000,
+                            slots: { text: @js($errors->first()) },
+                            dataset: { variant: 'danger' },
+                        },
+                    }));
+                }, { once: true });
+            </script>
+        @endif
 
         @fluxScripts
     </body>
